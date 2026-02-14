@@ -1,74 +1,35 @@
 'use client'
 
 import { useState } from 'react'
+import Link from 'next/link'
 import { Plus, Search, Filter, MoreVertical, Mail, Phone, Building } from 'lucide-react'
+import { useCustomers } from '@/hooks/use-api'
+import { LoadingSpinner, ErrorState, EmptyState } from './ui-states'
+import type { Customer } from '@/app/api/data/store'
 
-interface Customer {
-  id: string
-  name: string
-  email: string
-  company: string
-  status: 'lead' | 'prospect' | 'active' | 'churned'
-  tags: string[]
-  value: number
-  lastContact: string
-}
-
-const mockCustomers: Customer[] = [
-  {
-    id: '1',
-    name: 'Acme Corporation',
-    email: 'contact@acme.com',
-    company: 'Acme Corp',
-    status: 'active',
-    tags: ['enterprise', 'high-value'],
-    value: 150000,
-    lastContact: '2024-01-15',
-  },
-  {
-    id: '2',
-    name: 'TechStart Inc',
-    email: 'hello@techstart.io',
-    company: 'TechStart',
-    status: 'prospect',
-    tags: ['startup', 'tech'],
-    value: 5000,
-    lastContact: '2024-02-01',
-  },
-  {
-    id: '3',
-    name: 'Global Ventures',
-    email: 'info@globalventures.com',
-    company: 'Global Ventures LLC',
-    status: 'lead',
-    tags: ['consulting'],
-    value: 25000,
-    lastContact: '2024-02-05',
-  },
-]
-
-const statusColors = {
-  lead: 'bg-gray-100 text-gray-700',
-  prospect: 'bg-blue-100 text-blue-700',
-  active: 'bg-green-100 text-green-700',
-  churned: 'bg-red-100 text-red-700',
+const statusColors: Record<string, string> = {
+  Active: 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400',
+  Inactive: 'bg-gray-100 dark:bg-slate-700 text-gray-700 dark:text-gray-300',
+  Prospect: 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400',
 }
 
 export default function CustomerList() {
-  const [customers] = useState<Customer[]>(mockCustomers)
+  const { data: customers, loading, error, refetch } = useCustomers()
   const [searchQuery, setSearchQuery] = useState('')
   const [statusFilter, setStatusFilter] = useState<string>('all')
 
-  const filteredCustomers = customers.filter((customer) => {
+  const filteredCustomers = (customers || []).filter((customer) => {
     const matchesSearch =
       customer.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      customer.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      customer.company.toLowerCase().includes(searchQuery.toLowerCase())
+      customer.email.toLowerCase().includes(searchQuery.toLowerCase())
     
     const matchesStatus = statusFilter === 'all' || customer.status === statusFilter
 
     return matchesSearch && matchesStatus
   })
+
+  if (loading) return <LoadingSpinner text="Loading customers..." />
+  if (error) return <ErrorState message={error.message} onRetry={refetch} />
 
   return (
     <div className="space-y-6">
@@ -103,13 +64,12 @@ export default function CustomerList() {
           <select
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value)}
-            className="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
+            className="px-4 py-2 border border-gray-300 dark:border-slate-700 dark:bg-slate-800 dark:text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
           >
             <option value="all">All Status</option>
-            <option value="lead">Lead</option>
-            <option value="prospect">Prospect</option>
-            <option value="active">Active</option>
-            <option value="churned">Churned</option>
+            <option value="Active">Active</option>
+            <option value="Inactive">Inactive</option>
+            <option value="Prospect">Prospect</option>
           </select>
 
           <button className="flex items-center space-x-2 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50">
@@ -122,24 +82,24 @@ export default function CustomerList() {
       {/* Customer table */}
       <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
         <table className="min-w-full divide-y divide-gray-200">
-          <thead className="bg-gray-50">
+          <thead className="bg-gray-50 dark:bg-slate-900">
             <tr>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                 Customer
               </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                 Contact
               </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                Industry
+              </th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                 Status
               </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Tags
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                Annual Value
               </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Value
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                 Last Contact
               </th>
               <th className="relative px-6 py-3">
@@ -147,84 +107,74 @@ export default function CustomerList() {
               </th>
             </tr>
           </thead>
-          <tbody className="bg-white divide-y divide-gray-200">
-            {filteredCustomers.map((customer) => (
-              <tr key={customer.id} className="hover:bg-gray-50 cursor-pointer">
-                <td className="px-6 py-4 whitespace-nowrap">
-                  <div className="flex items-center">
-                    <div className="h-10 w-10 rounded-full bg-gradient-to-br from-purple-600 to-blue-500 flex items-center justify-center text-white font-semibold">
-                      {customer.name.charAt(0)}
-                    </div>
-                    <div className="ml-4">
-                      <div className="text-sm font-medium text-gray-900">
-                        {customer.name}
-                      </div>
-                      <div className="text-sm text-gray-500 flex items-center">
-                        <Building className="h-3 w-3 mr-1" />
-                        {customer.company}
-                      </div>
-                    </div>
-                  </div>
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap">
-                  <div className="space-y-1">
-                    <div className="text-sm text-gray-900 flex items-center">
-                      <Mail className="h-3 w-3 mr-1 text-gray-400" />
-                      {customer.email}
-                    </div>
-                  </div>
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap">
-                  <span
-                    className={`px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                      statusColors[customer.status]
-                    }`}
-                  >
-                    {customer.status}
-                  </span>
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap">
-                  <div className="flex flex-wrap gap-1">
-                    {customer.tags.map((tag) => (
-                      <span
-                        key={tag}
-                        className="px-2 py-1 text-xs bg-gray-100 text-gray-600 rounded"
-                      >
-                        {tag}
-                      </span>
-                    ))}
-                  </div>
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                  ${customer.value.toLocaleString()}
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                  {new Date(customer.lastContact).toLocaleDateString()}
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                  <button className="text-gray-400 hover:text-gray-600">
-                    <MoreVertical className="h-5 w-5" />
-                  </button>
+          <tbody className="bg-white dark:bg-slate-800 divide-y divide-gray-200 dark:divide-slate-700">
+            {filteredCustomers.length === 0 ? (
+              <tr>
+                <td colSpan={7} className="px-6 py-12 text-center">
+                  <EmptyState title="No customers found" description="Try adjusting your search filters" />
                 </td>
               </tr>
-            ))}
+            ) : (
+              filteredCustomers.map((customer) => (
+                <tr key={customer.id} className="hover:bg-gray-50 dark:hover:bg-slate-700 cursor-pointer transition-colors">
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <Link href={`/dashboard/customers/${customer.id}`} className="flex items-center hover:opacity-70">
+                      <div className="h-10 w-10 rounded-full bg-gradient-to-br from-purple-600 to-blue-500 dark:from-purple-500 dark:to-blue-400 flex items-center justify-center text-white font-semibold flex-shrink-0">
+                        {customer.name.charAt(0)}
+                      </div>
+                      <div className="ml-4">
+                        <div className="text-sm font-medium text-gray-900 dark:text-white">
+                          {customer.name}
+                        </div>
+                        <div className="text-sm text-gray-500 dark:text-gray-400">
+                          {customer.employees}
+                        </div>
+                      </div>
+                    </Link>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <div className="space-y-0.5">
+                      <a href={`mailto:${customer.email}`} className="text-sm text-purple-600 dark:text-purple-400 hover:underline flex items-center">
+                        <Mail className="h-3 w-3 mr-1" />
+                        {customer.email}
+                      </a>
+                      <a href={`tel:${customer.phone}`} className="text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white flex items-center">
+                        <Phone className="h-3 w-3 mr-1" />
+                        {customer.phone}
+                      </a>
+                    </div>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600 dark:text-gray-300">
+                    {customer.industry}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <span className={`px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${statusColors[customer.status]}`}>
+                      {customer.status}
+                    </span>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm font-semibold text-gray-900 dark:text-white">
+                    {customer.annualValue}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
+                    {customer.lastContact}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                    <button className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">
+                      <MoreVertical className="h-5 w-5" />
+                    </button>
+                  </td>
+                </tr>
+              ))
+            )}
           </tbody>
         </table>
       </div>
 
-      {/* Pagination */}
+      {/* Stats */}
       <div className="flex items-center justify-between">
-        <p className="text-sm text-gray-500">
-          Showing {filteredCustomers.length} of {customers.length} customers
+        <p className="text-sm text-gray-500 dark:text-gray-400">
+          Showing {filteredCustomers.length} of {customers?.length || 0} customers
         </p>
-        <div className="flex space-x-2">
-          <button className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50">
-            Previous
-          </button>
-          <button className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50">
-            Next
-          </button>
-        </div>
       </div>
     </div>
   )

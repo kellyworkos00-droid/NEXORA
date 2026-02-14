@@ -1,75 +1,21 @@
+'use client'
+
 import DashboardLayout from '@/components/dashboard/dashboard-layout'
 import { ActivityTimeline } from '@/components/dashboard/charts/activity-timeline'
-
-// Mock data
-const allActivities = [
-  {
-    id: '1',
-    type: 'email' as const,
-    title: 'Email sent to Acme Corporation',
-    description: 'Quarterly business review proposal shared',
-    timestamp: '2 hours ago',
-    actor: 'You',
-  },
-  {
-    id: '2',
-    type: 'call' as const,
-    title: 'Call with TechFlow Inc',
-    description: 'Discussed integration roadmap and timelines',
-    timestamp: '4 hours ago',
-    actor: 'Sarah Chen',
-  },
-  {
-    id: '3',
-    type: 'meeting' as const,
-    title: 'Team sync completed',
-    description: 'Weekly pipeline review meeting',
-    timestamp: '1 day ago',
-    actor: 'Calendar',
-  },
-  {
-    id: '4',
-    type: 'note' as const,
-    title: 'Deal moved to negotiation',
-    description: 'Global Ventures contract progressing',
-    timestamp: '1 day ago',
-    actor: 'Mike Johnson',
-  },
-  {
-    id: '5',
-    type: 'email' as const,
-    title: 'Follow-up email sent',
-    description: 'Reminded about pending proposal review',
-    timestamp: '2 days ago',
-    actor: 'You',
-  },
-  {
-    id: '6',
-    type: 'meeting' as const,
-    title: 'Customer onboarding call',
-    description: 'New customer TechFlow Inc orientation',
-    timestamp: '2 days ago',
-    actor: 'Support Team',
-  },
-  {
-    id: '7',
-    type: 'task' as const,
-    title: 'Task completed',
-    description: 'Follow up with 3 accounts due today',
-    timestamp: '3 days ago',
-    actor: 'You',
-  },
-  {
-    id: '8',
-    type: 'call' as const,
-    title: 'Support call',
-    description: 'Acme Corporation technical support',
-    timestamp: '3 days ago',
-    actor: 'Lisa Park',
-  },
-]
+import { useActivities } from '@/hooks/use-api'
+import { LoadingSpinner, ErrorState } from '@/components/dashboard/ui-states'
 
 export default function ActivitiesPage() {
+  const { data: allActivities, loading, error } = useActivities()
+
+  if (loading) return <DashboardLayout><LoadingSpinner text="Loading activities..." /></DashboardLayout>
+  if (error) return <DashboardLayout><ErrorState message={error.message} /></DashboardLayout>
+
+  const activities = allActivities || []
+  const today = new Date()
+  const weekAgo = new Date(today.getTime() - 7 * 24 * 60 * 60 * 1000)
+  const monthAgo = new Date(today.getTime() - 30 * 24 * 60 * 60 * 1000)
+
   return (
     <DashboardLayout>
       <div className="space-y-6">
@@ -101,25 +47,29 @@ export default function ActivitiesPage() {
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
           <div className="bg-white dark:bg-slate-800 rounded-lg p-4 border border-gray-200 dark:border-slate-700">
             <p className="text-sm text-gray-600 dark:text-gray-400">Today</p>
-            <p className="text-3xl font-bold text-gray-900 dark:text-white mt-1">4</p>
+            <p className="text-3xl font-bold text-gray-900 dark:text-white mt-1">{activities.length}</p>
           </div>
           <div className="bg-white dark:bg-slate-800 rounded-lg p-4 border border-gray-200 dark:border-slate-700">
             <p className="text-sm text-gray-600 dark:text-gray-400">This Week</p>
-            <p className="text-3xl font-bold text-gray-900 dark:text-white mt-1">18</p>
+            <p className="text-3xl font-bold text-gray-900 dark:text-white mt-1">{activities.length}</p>
           </div>
           <div className="bg-white dark:bg-slate-800 rounded-lg p-4 border border-gray-200 dark:border-slate-700">
             <p className="text-sm text-gray-600 dark:text-gray-400">This Month</p>
-            <p className="text-3xl font-bold text-gray-900 dark:text-white mt-1">72</p>
+            <p className="text-3xl font-bold text-gray-900 dark:text-white mt-1">{activities.length}</p>
           </div>
           <div className="bg-white dark:bg-slate-800 rounded-lg p-4 border border-gray-200 dark:border-slate-700">
             <p className="text-sm text-gray-600 dark:text-gray-400">Total</p>
-            <p className="text-3xl font-bold text-gray-900 dark:text-white mt-1">284</p>
+            <p className="text-3xl font-bold text-gray-900 dark:text-white mt-1">{activities.length}</p>
           </div>
         </div>
 
         {/* Timeline */}
         <div className="bg-white dark:bg-slate-800 rounded-lg shadow-sm border border-gray-200 dark:border-slate-700 p-8">
-          <ActivityTimeline items={allActivities} />
+          {activities.length > 0 ? (
+            <ActivityTimeline items={activities} />
+          ) : (
+            <p className="text-center text-gray-500 dark:text-gray-400">No activities yet</p>
+          )}
         </div>
       </div>
     </DashboardLayout>
