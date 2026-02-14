@@ -16,12 +16,12 @@ export function AnimatedNexoraLogo({ size = 'md' }: AnimatedNexoraLogoProps) {
   const config = sizeMap[size]
 
   const modules = [
-    { label: 'ERP', angle: 45, color: '#06b6d4' },
-    { label: 'HR', angle: 90, color: '#06b6d4' },
-    { label: 'SCM', angle: 135, color: '#06b6d4' },
-    { label: 'SCM', angle: 180, color: '#06b6d4' },
-    { label: 'POS', angle: 225, color: '#a855f7' },
-    { label: 'ERM', angle: 270, color: '#a855f7' },
+    { label: 'ERP', angle: 45, color: '#00d9ff' },
+    { label: 'HR', angle: 90, color: '#00d9ff' },
+    { label: 'SCM', angle: 135, color: '#00d9ff' },
+    { label: 'SCM', angle: 180, color: '#00d9ff' },
+    { label: 'POS', angle: 225, color: '#d946ef' },
+    { label: 'ERM', angle: 270, color: '#d946ef' },
   ]
 
   return (
@@ -41,7 +41,7 @@ export function AnimatedNexoraLogo({ size = 'md' }: AnimatedNexoraLogoProps) {
             }}
             animate={{ rotate: orbit % 2 === 0 ? 360 : -360 }}
             transition={{
-              duration: 20 + orbit * 5,
+              duration: 15 + orbit * 3.5,
               repeat: Infinity,
               ease: 'linear',
             }}
@@ -83,22 +83,22 @@ export function AnimatedNexoraLogo({ size = 'md' }: AnimatedNexoraLogoProps) {
           }}
         >
           <motion.div
-            className="absolute inset-0 rounded-full bg-gradient-to-r from-purple-500 to-cyan-500"
+            className="absolute inset-0 rounded-full bg-gradient-to-r from-fuchsia-500 to-cyan-400"
             animate={{
               boxShadow: [
-                '0 0 20px rgba(168, 85, 247, 0.5)',
-                '0 0 40px rgba(6, 182, 212, 0.8)',
-                '0 0 20px rgba(168, 85, 247, 0.5)',
+                '0 0 25px rgba(217, 70, 239, 0.6)',
+                '0 0 50px rgba(0, 217, 255, 0.9)',
+                '0 0 25px rgba(217, 70, 239, 0.6)',
               ],
             }}
-            transition={{ duration: 3, repeat: Infinity }}
+            transition={{ duration: 2.5, repeat: Infinity }}
           />
           <motion.div
             className="absolute inset-1 rounded-full bg-gray-900 dark:bg-gray-950 flex items-center justify-center"
             animate={{ rotate: 360 }}
-            transition={{ duration: 20, repeat: Infinity, ease: 'linear' }}
+            transition={{ duration: 16, repeat: Infinity, ease: 'linear' }}
           >
-            <span className={`font-bold text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-cyan-400 ${config.text}`}>
+            <span className={`font-bold text-transparent bg-clip-text bg-gradient-to-r from-fuchsia-400 to-cyan-300 ${config.text}`}>
               AI
             </span>
           </motion.div>
@@ -107,9 +107,9 @@ export function AnimatedNexoraLogo({ size = 'md' }: AnimatedNexoraLogoProps) {
 
       {/* Text */}
       <motion.h1
-        className="text-4xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-purple-500 to-cyan-500"
+        className="text-4xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-fuchsia-500 to-cyan-400"
         animate={{ y: [0, -10, 0] }}
-        transition={{ duration: 3, repeat: Infinity, ease: 'easeInOut' }}
+        transition={{ duration: 2.8, repeat: Infinity, ease: 'easeInOut' }}
       >
         NEXORA
       </motion.h1>

@@ -4,16 +4,16 @@ import { cva, type VariantProps } from 'class-variance-authority'
 import { cn } from '@/lib/utils'
 
 const buttonVariants = cva(
-  'inline-flex items-center justify-center whitespace-nowrap rounded-lg text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50',
+  'inline-flex items-center justify-center whitespace-nowrap rounded-lg text-sm font-medium ring-offset-background dark:ring-offset-slate-950 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 dark:focus-visible:ring-purple-500 disabled:pointer-events-none disabled:opacity-50',
   {
     variants: {
       variant: {
-        default: 'bg-primary-600 text-white hover:bg-primary-700',
-        destructive: 'bg-red-500 text-white hover:bg-red-600',
-        outline: 'border-2 border-slate-300 dark:border-slate-700 bg-transparent hover:bg-slate-100 dark:hover:bg-slate-800',
+        default: 'bg-purple-600 text-white hover:bg-purple-700 dark:bg-purple-600 dark:hover:bg-purple-700 dark:text-white',
+        destructive: 'bg-red-500 text-white hover:bg-red-600 dark:bg-red-600 dark:hover:bg-red-700',
+        outline: 'border-2 border-slate-300 dark:border-slate-700 bg-transparent hover:bg-slate-100 dark:hover:bg-slate-800 dark:text-slate-100',
         secondary: 'bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-slate-100 hover:bg-slate-200 dark:hover:bg-slate-700',
-        ghost: 'hover:bg-slate-100 dark:hover:bg-slate-800',
-        link: 'text-primary-600 underline-offset-4 hover:underline',
+        ghost: 'hover:bg-slate-100 dark:hover:bg-slate-800 dark:text-slate-100',
+        link: 'text-purple-600 dark:text-purple-400 underline-offset-4 hover:underline dark:hover:text-purple-300',
       },
       size: {
         default: 'h-10 px-4 py-2',
