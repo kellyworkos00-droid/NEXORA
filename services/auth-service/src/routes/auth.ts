@@ -1,7 +1,7 @@
 import { Router, Request, Response } from 'express'
 import { z } from 'zod'
 import bcrypt from 'bcrypt'
-import jwt from 'jsonwebtoken'
+import jwt, { SignOptions } from 'jsonwebtoken'
 import { v4 as uuidv4 } from 'uuid'
 import { db } from '../db/database'
 import { logger } from '../utils/logger'
@@ -272,7 +272,7 @@ function generateAccessToken(user: any): string {
       role: user.role,
     },
     secret,
-    { expiresIn: process.env.JWT_EXPIRES_IN || '7d' }
+    { expiresIn: (process.env.JWT_EXPIRES_IN || '7d') } as any
   )
 }
 
@@ -283,7 +283,7 @@ function generateRefreshToken(user: any): string {
   return jwt.sign(
     { id: user.id },
     secret,
-    { expiresIn: process.env.REFRESH_TOKEN_EXPIRES_IN || '30d' }
+    { expiresIn: (process.env.REFRESH_TOKEN_EXPIRES_IN || '30d') } as any
   )
 }
 
