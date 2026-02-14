@@ -4,6 +4,7 @@ import { useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { Eye, EyeOff, Mail, Lock, Github } from 'lucide-react'
+import { toast } from '@/components/ui/toast'
 
 export default function LoginPage() {
   const router = useRouter()
@@ -37,10 +38,16 @@ export default function LoginPage() {
       localStorage.setItem('accessToken', data.data.accessToken)
       localStorage.setItem('refreshToken', data.data.refreshToken)
 
+      // Show success toast
+      toast.success('Login successful', 'Redirecting to dashboard...')
+      
       // Redirect to dashboard
-      router.push('/dashboard')
+      setTimeout(() => {
+        router.push('/dashboard')
+      }, 500)
     } catch (err: any) {
       setError(err.message)
+      toast.error('Login failed', err.message)
     } finally {
       setIsLoading(false)
     }

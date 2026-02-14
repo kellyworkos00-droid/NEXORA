@@ -1,43 +1,56 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { findUserByEmail, createUser, generateToken } from '@/app/api/data/auth-store'
+import { findUserByEmail, createUser, generateToken, generateRefreshToken, createSession } from '@/app/api/data/auth-store'
+import { rateLimit, getRateLimitHeaders } from '@/app/api/utils/rate-limit'
+import { ValidationError, ConflictError, RateLimitError, formatErrorResponse, getStatusCode } from '@/app/api/utils/errors'
 
 export async function POST(request: NextRequest) {
   try {
+    // Rate limiting: 3 registration attempts per hour per IP
+    const ip = request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || 'unknown'
+    const rateLimitResult = rateLimit(`register:${ip}`, {
+      windowMs: 60 * 60 * 1000, // 1 hour
+      maxRequests: 3,
+    })
+
+    if (!rateLimitResult.allowed) {
+      throw new RateLimitError('Too many registration attempts. Please try again later.', {
+        resetTime: new Date(rateLimitResult.resetTime).toISOString(),
+      })
+    }
+
     const { email, name, password, confirmPassword } = await request.json()
 
     if (!email || !name || !password || !confirmPassword) {
-      return NextResponse.json(
-        { error: 'All fields are required' },
-        { status: 400 }
-      )
+      throw new ValidationError('All fields are required')
     }
 
     if (password !== confirmPassword) {
-      return NextResponse.json(
-        { error: 'Passwords do not match' },
-        { status: 400 }
-      )
+      throw new ValidationError('Passwords do not match')
     }
 
     if (password.length < 6) {
-      return NextResponse.json(
-        { error: 'Password must be at least 6 characters' },
-        { status: 400 }
-      )
+      throw new ValidationError('Password must be at least 6 characters')
     }
 
-    if (findUserByEmail(email)) {
-      return NextResponse.json(
-        { error: 'Email already registered' },
-        { status: 409 }
-      )
+    // Email validation
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+    if (!emailRegex.test(email)) {
+      throw new ValidationError('Invalid email format')
     }
 
-    const user = createUser(email, name, password)
+    const existingUser = await findUserByEmail(email)
+    if (existingUser) {
+      throw new ConflictError('Email already registered')
+    }
+
+    const user = await createUser(email, name, password)
     const accessToken = generateToken(user.id)
-    const refreshToken = generateToken(user.id) // In production, different token
+    const refreshToken = generateRefreshToken(user.id)
 
-    return NextResponse.json(
+    // Create session in database
+    await createSession(user.id, refreshToken)
+
+    const response = NextResponse.json(
       {
         success: true,
         data: {
@@ -50,13 +63,32 @@ export async function POST(request: NextRequest) {
           },
         },
       },
-      { status: 201 }
+      { 
+        status: 201,
+        headers: getRateLimitHeaders(rateLimitResult),
+      }
     )
+
+    // Set tokens in HTTP-only cookies
+    response.cookies.set('accessToken', accessToken, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
+      maxAge: 24 * 60 * 60, // 24 hours
+    })
+    response.cookies.set('refreshToken', refreshToken, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
+      maxAge: 30 * 24 * 60 * 60, // 30 days
+    })
+
+    return response
   } catch (error: any) {
     console.error('Registration error:', error)
     return NextResponse.json(
-      { error: 'Internal server error' },
-      { status: 500 }
+      formatErrorResponse(error),
+      { status: getStatusCode(error) }
     )
   }
 }
