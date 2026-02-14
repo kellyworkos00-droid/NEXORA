@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { findUserByEmail, validatePassword, generateToken, generateRefreshToken, createSession } from '@/app/api/data/auth-store'
+import { findUserByEmail, validatePassword, generateToken, generateRefreshToken, createSession, updateLastLogin } from '@/app/api/data/auth-store'
 import { rateLimit, getRateLimitHeaders } from '@/app/api/utils/rate-limit'
 import { ValidationError, AuthenticationError, RateLimitError, formatErrorResponse, getStatusCode } from '@/app/api/utils/errors'
+import { logActivity, ActivityActions } from '@/app/api/utils/activity-logger'
 
 export async function POST(request: NextRequest) {
   try {
@@ -55,6 +56,17 @@ export async function POST(request: NextRequest) {
 
     // Create session in database
     await createSession(user.id, refreshToken)
+
+    // Update last login timestamp
+    await updateLastLogin(user.id)
+
+    // Log login activity
+    await logActivity({
+      userId: user.id,
+      action: ActivityActions.LOGIN,
+      description: 'User logged in successfully',
+      request,
+    })
 
     const response = NextResponse.json(
       {

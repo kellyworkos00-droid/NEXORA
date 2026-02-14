@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { findUserByEmail, createUser, generateToken, generateRefreshToken, createSession } from '@/app/api/data/auth-store'
 import { rateLimit, getRateLimitHeaders } from '@/app/api/utils/rate-limit'
 import { ValidationError, ConflictError, RateLimitError, formatErrorResponse, getStatusCode } from '@/app/api/utils/errors'
+import { logActivity, ActivityActions } from '@/app/api/utils/activity-logger'
 
 export async function POST(request: NextRequest) {
   try {
@@ -48,6 +49,15 @@ export async function POST(request: NextRequest) {
     const refreshToken = generateRefreshToken(user.id)
 
     // Create session in database
+    await createSession(user.id, refreshToken)
+
+    // Log registration activity
+    await logActivity({
+      userId: user.id,
+      action: ActivityActions.REGISTER,
+      description: 'User registered successfully',
+      request,
+    })
     await createSession(user.id, refreshToken)
 
     const response = NextResponse.json(

@@ -15,11 +15,15 @@ export interface User {
   password?: string
   oauthProvider?: string
   oauthId?: string
+  avatarUrl?: string
+  bio?: string
+  role?: string
   emailVerified?: boolean
   twoFactorSecret?: string
   twoFactorEnabled?: boolean
   createdAt: string
   updatedAt?: string
+  lastLoginAt?: string
 }
 
 export interface Session {
@@ -49,7 +53,7 @@ export async function findUserByEmail(email: string): Promise<User | undefined> 
     }
 
     const result = await query(
-      'SELECT id, email, name, password_hash as password, oauth_provider as "oauthProvider", oauth_id as "oauthId", email_verified as "emailVerified", two_factor_secret as "twoFactorSecret", two_factor_enabled as "twoFactorEnabled", created_at as "createdAt" FROM users WHERE email = $1',
+      'SELECT id, email, name, password_hash as password, oauth_provider as "oauthProvider", oauth_id as "oauthId", avatar_url as "avatarUrl", bio, role, email_verified as "emailVerified", two_factor_secret as "twoFactorSecret", two_factor_enabled as "twoFactorEnabled", created_at as "createdAt", last_login_at as "lastLoginAt" FROM users WHERE email = $1',
       [normalizedEmail]
     )
     
@@ -63,10 +67,14 @@ export async function findUserByEmail(email: string): Promise<User | undefined> 
       password: row.password,
       oauthProvider: row.oauthProvider,
       oauthId: row.oauthId,
+      avatarUrl: row.avatarUrl,
+      bio: row.bio,
+      role: row.role,
       emailVerified: row.emailVerified,
       twoFactorSecret: row.twoFactorSecret,
       twoFactorEnabled: row.twoFactorEnabled,
       createdAt: row.createdAt,
+      lastLoginAt: row.lastLoginAt,
     }
   } catch (error) {
     console.error('Error finding user by email:', error)
@@ -86,7 +94,7 @@ export async function findUserById(id: string): Promise<User | undefined> {
     }
 
     const result = await query(
-      'SELECT id, email, name, password_hash as password, oauth_provider as "oauthProvider", oauth_id as "oauthId", email_verified as "emailVerified", two_factor_secret as "twoFactorSecret", two_factor_enabled as "twoFactorEnabled", created_at as "createdAt" FROM users WHERE id = $1',
+      'SELECT id, email, name, password_hash as password, oauth_provider as "oauthProvider", oauth_id as "oauthId", avatar_url as "avatarUrl", bio, role, email_verified as "emailVerified", two_factor_secret as "twoFactorSecret", two_factor_enabled as "twoFactorEnabled", created_at as "createdAt", last_login_at as "lastLoginAt" FROM users WHERE id = $1',
       [id]
     )
     
@@ -100,10 +108,14 @@ export async function findUserById(id: string): Promise<User | undefined> {
       password: row.password,
       oauthProvider: row.oauthProvider,
       oauthId: row.oauthId,
+      avatarUrl: row.avatarUrl,
+      bio: row.bio,
+      role: row.role,
       emailVerified: row.emailVerified,
       twoFactorSecret: row.twoFactorSecret,
       twoFactorEnabled: row.twoFactorEnabled,
       createdAt: row.createdAt,
+      lastLoginAt: row.lastLoginAt,
     }
   } catch (error) {
     console.error('Error finding user by id:', error)
@@ -118,7 +130,7 @@ export async function findUserById(id: string): Promise<User | undefined> {
 export async function findUserByOAuth(provider: string, oauthId: string): Promise<User | undefined> {
   try {
     const result = await query(
-      'SELECT id, email, name, password_hash as password, oauth_provider as "oauthProvider", oauth_id as "oauthId", email_verified as "emailVerified", two_factor_secret as "twoFactorSecret", two_factor_enabled as "twoFactorEnabled", created_at as "createdAt" FROM users WHERE oauth_provider = $1 AND oauth_id = $2',
+      'SELECT id, email, name, password_hash as password, oauth_provider as "oauthProvider", oauth_id as "oauthId", avatar_url as "avatarUrl", bio, role, email_verified as "emailVerified", two_factor_secret as "twoFactorSecret", two_factor_enabled as "twoFactorEnabled", created_at as "createdAt", last_login_at as "lastLoginAt" FROM users WHERE oauth_provider = $1 AND oauth_id = $2',
       [provider, oauthId]
     )
     
@@ -132,10 +144,14 @@ export async function findUserByOAuth(provider: string, oauthId: string): Promis
       password: row.password,
       oauthProvider: row.oauthProvider,
       oauthId: row.oauthId,
+      avatarUrl: row.avatarUrl,
+      bio: row.bio,
+      role: row.role,
       emailVerified: row.emailVerified,
       twoFactorSecret: row.twoFactorSecret,
       twoFactorEnabled: row.twoFactorEnabled,
       createdAt: row.createdAt,
+      lastLoginAt: row.lastLoginAt,
     }
   } catch (error) {
     console.error('Error finding user by OAuth:', error)
@@ -550,6 +566,149 @@ export async function updateUser2FA(userId: string, secret: string | null, enabl
     return true
   } catch (error) {
     console.error('Error updating 2FA:', error)
+    return false
+  }
+}
+
+// Profile Management Functions
+export async function updateUserProfile(
+  userId: string,
+  updates: { name?: string; bio?: string; avatarUrl?: string }
+): Promise<User | null> {
+  try {
+    const fields: string[] = []
+    const values: any[] = []
+    let paramIndex = 1
+
+    if (updates.name !== undefined) {
+      fields.push(`name = $${paramIndex++}`)
+      values.push(updates.name)
+    }
+    if (updates.bio !== undefined) {
+      fields.push(`bio = $${paramIndex++}`)
+      values.push(updates.bio)
+    }
+    if (updates.avatarUrl !== undefined) {
+      fields.push(`avatar_url = $${paramIndex++}`)
+      values.push(updates.avatarUrl)
+    }
+
+    if (fields.length === 0) {
+      const user = await findUserById(userId)
+      return user ?? null
+    }
+
+    fields.push(`updated_at = CURRENT_TIMESTAMP`)
+    values.push(userId)
+
+    await query(
+      `UPDATE users SET ${fields.join(', ')} WHERE id = $${paramIndex}`,
+      values
+    )
+
+    const user = await findUserById(userId)
+    return user ?? null
+  } catch (error) {
+    console.error('Error updating user profile:', error)
+    return null
+  }
+}
+
+export async function changeUserPassword(userId: string, currentPassword: string, newPassword: string): Promise<boolean> {
+  try {
+    const user = await findUserById(userId)
+    if (!user || !user.password) {
+      return false
+    }
+
+    // Verify current password
+    const isValid = await bcrypt.compare(currentPassword, user.password)
+    if (!isValid) {
+      return false
+    }
+
+    // Hash new password
+    const hashedPassword = await hashPassword(newPassword)
+
+    // Update password
+    await query(
+      'UPDATE users SET password_hash = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2',
+      [hashedPassword, userId]
+    )
+
+    // Delete all sessions except the current one (force re-login on other devices)
+    await query(
+      'DELETE FROM sessions WHERE user_id = $1 AND created_at < NOW() - INTERVAL \'1 minute\'',
+      [userId]
+    )
+
+    return true
+  } catch (error) {
+    console.error('Error changing password:', error)
+    return false
+  }
+}
+
+export async function updateLastLogin(userId: string): Promise<void> {
+  try {
+    await query(
+      'UPDATE users SET last_login_at = CURRENT_TIMESTAMP WHERE id = $1',
+      [userId]
+    )
+  } catch (error) {
+    console.error('Error updating last login:', error)
+  }
+}
+
+export async function deleteUserAccount(userId: string): Promise<boolean> {
+  try {
+    // Delete user (CASCADE will delete sessions, tokens, etc.)
+    await query('DELETE FROM users WHERE id = $1', [userId])
+    return true
+  } catch (error) {
+    console.error('Error deleting user account:', error)
+    return false
+  }
+}
+
+// Admin Functions
+export async function getAllUsers(limit: number = 50, offset: number = 0): Promise<User[]> {
+  try {
+    const result = await query(
+      `SELECT id, email, name, avatar_url as "avatarUrl", bio, role, email_verified as "emailVerified",
+              two_factor_enabled as "twoFactorEnabled", created_at as "createdAt", last_login_at as "lastLoginAt"
+       FROM users
+       ORDER BY created_at DESC
+       LIMIT $1 OFFSET $2`,
+      [limit, offset]
+    )
+
+    return result.rows
+  } catch (error) {
+    console.error('Error getting all users:', error)
+    return []
+  }
+}
+
+export async function getUserCount(): Promise<number> {
+  try {
+    const result = await query('SELECT COUNT(*) as count FROM users')
+    return parseInt(result.rows[0].count)
+  } catch (error) {
+    console.error('Error getting user count:', error)
+    return 0
+  }
+}
+
+export async function updateUserRole(userId: string, role: string): Promise<boolean> {
+  try {
+    await query(
+      'UPDATE users SET role = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2',
+      [role, userId]
+    )
+    return true
+  } catch (error) {
+    console.error('Error updating user role:', error)
     return false
   }
 }

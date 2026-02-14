@@ -1,10 +1,25 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { deleteSession } from '@/app/api/data/auth-store'
+import { deleteSession, verifyToken } from '@/app/api/data/auth-store'
+import { logActivity, ActivityActions } from '@/app/api/utils/activity-logger'
 
 export async function POST(request: NextRequest) {
   try {
-    // Get refresh token from cookies
+    // Get tokens from cookies
     const refreshToken = request.cookies.get('refreshToken')?.value
+    const accessToken = request.cookies.get('accessToken')?.value
+
+    // Log logout activity if we can verify the user
+    if (accessToken) {
+      const payload = verifyToken(accessToken)
+      if (payload) {
+        await logActivity({
+          userId: payload.userId,
+          action: ActivityActions.LOGOUT,
+          description: 'User logged out',
+          request,
+        })
+      }
+    }
 
     // Delete session from database if token exists
     if (refreshToken) {
