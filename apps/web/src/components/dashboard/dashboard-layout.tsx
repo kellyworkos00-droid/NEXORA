@@ -18,6 +18,7 @@ import {
   Bell,
   Search,
 } from 'lucide-react'
+import { ThemeToggle } from '@/components/theme-toggle'
 
 const navigation = [
   { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
@@ -38,7 +39,7 @@ export default function DashboardLayout({
   const pathname = usePathname()
 
   return (
-    <div className="flex h-screen bg-gray-50">
+    <div className="flex h-screen bg-gray-50 dark:bg-slate-950">
       {/* Mobile sidebar backdrop */}
       {sidebarOpen && (
         <div
@@ -50,21 +51,21 @@ export default function DashboardLayout({
       {/* Sidebar */}
       <aside
         className={`
-          fixed inset-y-0 left-0 z-50 w-64 transform bg-white border-r border-gray-200
+          fixed inset-y-0 left-0 z-50 w-64 transform bg-white dark:bg-slate-900 border-r border-gray-200 dark:border-gray-700
           transition-transform duration-300 ease-in-out lg:translate-x-0 lg:static lg:inset-0
           ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}
         `}
       >
         <div className="flex h-full flex-col">
           {/* Logo */}
-          <div className="flex h-16 items-center justify-between px-6 border-b border-gray-200">
+          <div className="flex h-16 items-center justify-between px-6 border-b border-gray-200 dark:border-gray-700">
             <Link href="/dashboard" className="flex items-center space-x-2">
               <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-purple-600 to-blue-500" />
-              <span className="text-xl font-bold text-gray-900">NEXORA</span>
+              <span className="text-xl font-bold text-gray-900 dark:text-white">NEXORA</span>
             </Link>
             <button
               onClick={() => setSidebarOpen(false)}
-              className="lg:hidden text-gray-500 hover:text-gray-700"
+              className="lg:hidden text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300"
             >
               <X className="h-6 w-6" />
             </button>
@@ -120,7 +121,7 @@ export default function DashboardLayout({
       {/* Main content */}
       <div className="flex flex-1 flex-col overflow-hidden">
         {/* Top bar */}
-        <header className="flex h-16 items-center justify-between border-b border-gray-200 bg-white px-6">
+        <header className="flex h-16 items-center justify-between border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-slate-900 px-6">
           <button
             onClick={() => setSidebarOpen(true)}
             className="text-gray-500 hover:text-gray-700 lg:hidden"
@@ -142,6 +143,7 @@ export default function DashboardLayout({
 
           {/* Actions */}
           <div className="flex items-center space-x-4">
+            <ThemeToggle />
             <button className="relative text-gray-500 hover:text-gray-700">
               <Bell className="h-6 w-6" />
               <span className="absolute -top-1 -right-1 h-4 w-4 rounded-full bg-red-500 text-white text-xs flex items-center justify-center">
@@ -155,7 +157,7 @@ export default function DashboardLayout({
         </header>
 
         {/* Page content */}
-        <main className="flex-1 overflow-y-auto bg-gray-50 p-6">
+        <main className="flex-1 overflow-y-auto bg-gray-50 dark:bg-slate-950 p-6">
           {children}
         </main>
       </div>

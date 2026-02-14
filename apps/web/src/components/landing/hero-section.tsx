@@ -3,6 +3,7 @@
 import { motion } from 'framer-motion'
 import { ArrowRight, Sparkles, BarChart3, Zap } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { AnimatedNexoraLogo } from '@/components/animated-nexora-logo'
 
 export function HeroSection() {
   return (
@@ -26,6 +27,15 @@ export function HeroSection() {
               <Sparkles className="w-4 h-4" />
               AI-Native Business Operating System
             </div>
+          </motion.div>
+
+          {/* Animated Logo */}
+          <motion.div
+            initial={{ opacity: 0, scale: 0.8 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ duration: 0.7, delay: 0.2 }}
+          >
+            <AnimatedNexoraLogo size="lg" />
           </motion.div>
 
           {/* Main Headline */}

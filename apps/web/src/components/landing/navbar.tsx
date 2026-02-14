@@ -3,6 +3,7 @@
 import Link from 'next/link'
 import { motion } from 'framer-motion'
 import { Button } from '@/components/ui/button'
+import { ThemeToggle } from '@/components/theme-toggle'
 
 export function Navbar() {
   return (
@@ -42,6 +43,7 @@ export function Navbar() {
 
           {/* CTA */}
           <div className="flex items-center gap-4">
+            <ThemeToggle />
             <Button variant="ghost" asChild>
               <Link href="/login">Sign In</Link>
             </Button>
