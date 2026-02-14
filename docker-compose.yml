@@ -1,0 +1,135 @@
+version: '3.9'
+
+services:
+  # PostgreSQL Database
+  postgres:
+    image: postgres:15-alpine
+    container_name: nexora-postgres
+    environment:
+      POSTGRES_DB: nexora
+      POSTGRES_USER: nexora
+      POSTGRES_PASSWORD: password
+    ports:
+      - '5432:5432'
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U nexora']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Redis Cache
+  redis:
+    image: redis:7-alpine
+    container_name: nexora-redis
+    ports:
+      - '6379:6379'
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ['CMD', 'redis-cli', 'ping']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # API Gateway
+  api-gateway:
+    build:
+      context: .
+      dockerfile: ./services/api-gateway/Dockerfile
+    container_name: nexora-api-gateway
+    ports:
+      - '4000:4000'
+    environment:
+      - NODE_ENV=development
+      - DATABASE_URL=postgresql://nexora:password@postgres:5432/nexora
+      - REDIS_URL=redis://redis:6379
+    depends_on:
+      - postgres
+      - redis
+    volumes:
+      - ./services/api-gateway:/app
+      - /app/node_modules
+
+  # Auth Service
+  auth-service:
+    build:
+      context: .
+      dockerfile: ./services/auth-service/Dockerfile
+    container_name: nexora-auth
+    ports:
+      - '4001:4001'
+    environment:
+      - NODE_ENV=development
+      - DATABASE_URL=postgresql://nexora:password@postgres:5432/nexora
+      - REDIS_URL=redis://redis:6379
+    depends_on:
+      - postgres
+      - redis
+    volumes:
+      - ./services/auth-service:/app
+      - /app/node_modules
+
+  # CRM Service
+  crm-service:
+    build:
+      context: .
+      dockerfile: ./services/crm-service/Dockerfile
+    container_name: nexora-crm
+    ports:
+      - '4003:4003'
+    environment:
+      - NODE_ENV=development
+      - DATABASE_URL=postgresql://nexora:password@postgres:5432/nexora
+      - JWT_SECRET=your-secret-key-change-in-production
+    depends_on:
+      - postgres
+    volumes:
+      - ./services/crm-service:/app
+      - /app/node_modules
+
+  # AI Engine
+  ai-engine:
+    build:
+      context: .
+      dockerfile: ./services/ai-engine/Dockerfile
+    container_name: nexora-ai
+    ports:
+      - '4002:4002'
+    environment:
+      - NODE_ENV=development
+      - DATABASE_URL=postgresql://nexora:password@postgres:5432/nexora
+      - REDIS_URL=redis://redis:6379
+    depends_on:
+      - postgres
+      - redis
+    volumes:
+      - ./services/ai-engine:/app
+      - /app/node_modules
+
+  # Web App (Next.js)
+  web:
+    build:
+      context: .
+      dockerfile: ./apps/web/Dockerfile
+    container_name: nexora-web
+    ports:
+      - '3000:3000'
+    environment:
+      - NODE_ENV=development
+      - NEXT_PUBLIC_API_URL=http://localhost:4000
+    depends_on:
+      - api-gateway
+    volumes:
+      - ./apps/web:/app
+      - /app/node_modules
+      - /app/.next
+
+volumes:
+  postgres_data:
+  redis_data:
+
+networks:
+  default:
+    name: nexora-network

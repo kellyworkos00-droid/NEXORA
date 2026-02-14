@@ -1,0 +1,30 @@
+{
+  "name": "@nexora/ai-engine",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "tsx watch src/index.ts",
+    "build": "tsc",
+    "start": "node dist/index.js",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "express": "^4.18.2",
+    "dotenv": "^16.4.1",
+    "winston": "^3.11.0",
+    "axios": "^1.6.7",
+    "openai": "^4.28.0",
+    "@pinecone-database/pinecone": "^2.0.1",
+    "pg": "^8.11.3",
+    "redis": "^4.6.12",
+    "zod": "^3.22.4",
+    "langchain": "^0.1.25",
+    "@langchain/openai": "^0.0.19"
+  },
+  "devDependencies": {
+    "@types/express": "^4.17.21",
+    "@types/pg": "^8.10.9",
+    "typescript": "^5.3.3",
+    "tsx": "^4.7.0"
+  }
+}
