@@ -18,7 +18,7 @@ export function middleware(request: NextRequest) {
 
   // For dashboard and other protected routes, check authentication
   if (pathname.startsWith('/dashboard')) {
-    const token = request.cookies.get('accessToken')?.value || 
+    const token = request.cookies.get('access_token')?.value || 
                   request.headers.get('authorization')?.replace('Bearer ', '')
 
     if (!token) {

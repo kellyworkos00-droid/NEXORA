@@ -3,7 +3,7 @@ import { verifyRefreshToken, generateToken, findUserById, findSessionByToken } f
 
 export async function POST(request: NextRequest) {
   try {
-    const refreshToken = request.cookies.get('refreshToken')?.value ||
+    const refreshToken = request.cookies.get('refresh_token')?.value ||
                          (await request.json()).refreshToken
 
     if (!refreshToken) {
@@ -57,7 +57,7 @@ export async function POST(request: NextRequest) {
     )
 
     // Update access token cookie
-    response.cookies.set('accessToken', newAccessToken, {
+    response.cookies.set('access_token', newAccessToken, {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
       sameSite: 'lax',

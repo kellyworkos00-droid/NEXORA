@@ -5,8 +5,8 @@ import { logActivity, ActivityActions } from '@/app/api/utils/activity-logger'
 export async function POST(request: NextRequest) {
   try {
     // Get tokens from cookies
-    const refreshToken = request.cookies.get('refreshToken')?.value
-    const accessToken = request.cookies.get('accessToken')?.value
+    const refreshToken = request.cookies.get('refresh_token')?.value
+    const accessToken = request.cookies.get('access_token')?.value
 
     // Log logout activity if we can verify the user
     if (accessToken) {
@@ -32,10 +32,10 @@ export async function POST(request: NextRequest) {
     })
 
     // Clear tokens from cookies
-    response.cookies.set('accessToken', '', {
+    response.cookies.set('access_token', '', {
       maxAge: 0,
     })
-    response.cookies.set('refreshToken', '', {
+    response.cookies.set('refresh_token', '', {
       maxAge: 0,
     })
 

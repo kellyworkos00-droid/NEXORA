@@ -5,7 +5,7 @@ import { query } from '@/app/api/data/db'
 export async function GET(request: NextRequest) {
   try {
     // Get token from cookie or header
-    const token = request.cookies.get('accessToken')?.value ||
+    const token = request.cookies.get('access_token')?.value ||
                   request.headers.get('authorization')?.replace('Bearer ', '')
 
     if (!token) {

@@ -42,13 +42,13 @@ export async function GET(request: NextRequest) {
 
     // Set tokens in cookies
     const response = NextResponse.redirect(new URL('/dashboard', request.url))
-    response.cookies.set('accessToken', accessToken, {
+    response.cookies.set('access_token', accessToken, {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
       sameSite: 'lax',
       maxAge: 24 * 60 * 60, // 24 hours
     })
-    response.cookies.set('refreshToken', refreshToken, {
+    response.cookies.set('refresh_token', refreshToken, {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
       sameSite: 'lax',
