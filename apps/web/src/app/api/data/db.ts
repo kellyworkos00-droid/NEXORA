@@ -4,11 +4,13 @@ let pool: Pool | null = null
 
 export function getPool(): Pool {
   if (!pool) {
+    const connectionString = process.env.DATABASE_URL
+    
     pool = new Pool({
-      connectionString: process.env.DATABASE_URL,
-      ssl: {
-        rejectUnauthorized: false,
-      },
+      connectionString,
+      ssl: connectionString?.includes('sslmode=require') 
+        ? { rejectUnauthorized: false }
+        : undefined,
     })
 
     pool.on('error', (err) => {
@@ -137,6 +139,223 @@ export async function initDatabase() {
       CREATE INDEX IF NOT EXISTS idx_activity_logs_user_id ON activity_logs(user_id);
       CREATE INDEX IF NOT EXISTS idx_activity_logs_action ON activity_logs(action);
       CREATE INDEX IF NOT EXISTS idx_activity_logs_created_at ON activity_logs(created_at DESC);
+    `)
+
+    // Create notifications table
+    await query(`
+      CREATE TABLE IF NOT EXISTS notifications (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        type VARCHAR(50) DEFAULT 'info',
+        title VARCHAR(255) NOT NULL,
+        message TEXT NOT NULL,
+        link VARCHAR(500),
+        read BOOLEAN DEFAULT FALSE,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      );
+      
+      CREATE INDEX IF NOT EXISTS idx_notifications_user_id ON notifications(user_id);
+      CREATE INDEX IF NOT EXISTS idx_notifications_read ON notifications(read);
+      CREATE INDEX IF NOT EXISTS idx_notifications_created_at ON notifications(created_at DESC);
+    `)
+
+    // Create whiteboards tables
+    await query(`
+      CREATE TABLE IF NOT EXISTS whiteboards (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        name VARCHAR(255) NOT NULL,
+        description TEXT,
+        created_by UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      );
+
+      CREATE INDEX IF NOT EXISTS idx_whiteboards_created_by ON whiteboards(created_by);
+      CREATE INDEX IF NOT EXISTS idx_whiteboards_created_at ON whiteboards(created_at DESC);
+    `)
+
+    await query(`
+      CREATE TABLE IF NOT EXISTS whiteboard_members (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        board_id UUID NOT NULL REFERENCES whiteboards(id) ON DELETE CASCADE,
+        user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        role VARCHAR(50) DEFAULT 'editor',
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      );
+
+      CREATE UNIQUE INDEX IF NOT EXISTS idx_whiteboard_members_unique ON whiteboard_members(board_id, user_id);
+      CREATE INDEX IF NOT EXISTS idx_whiteboard_members_user_id ON whiteboard_members(user_id);
+    `)
+
+    await query(`
+      CREATE TABLE IF NOT EXISTS whiteboard_items (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        board_id UUID NOT NULL REFERENCES whiteboards(id) ON DELETE CASCADE,
+        type VARCHAR(50) NOT NULL,
+        x INTEGER NOT NULL DEFAULT 0,
+        y INTEGER NOT NULL DEFAULT 0,
+        width INTEGER NOT NULL DEFAULT 240,
+        height INTEGER NOT NULL DEFAULT 160,
+        content TEXT,
+        color VARCHAR(50) DEFAULT 'sunrise',
+        created_by UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      );
+
+      CREATE INDEX IF NOT EXISTS idx_whiteboard_items_board_id ON whiteboard_items(board_id);
+      CREATE INDEX IF NOT EXISTS idx_whiteboard_items_created_at ON whiteboard_items(created_at DESC);
+    `)
+
+    // Create chat tables
+    await query(`
+      CREATE TABLE IF NOT EXISTS chat_channels (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        name VARCHAR(120) NOT NULL,
+        description TEXT,
+        is_private BOOLEAN DEFAULT FALSE,
+        created_by UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      );
+
+      CREATE INDEX IF NOT EXISTS idx_chat_channels_created_by ON chat_channels(created_by);
+      CREATE INDEX IF NOT EXISTS idx_chat_channels_created_at ON chat_channels(created_at DESC);
+    `)
+
+    await query(`
+      CREATE TABLE IF NOT EXISTS chat_members (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        channel_id UUID NOT NULL REFERENCES chat_channels(id) ON DELETE CASCADE,
+        user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        role VARCHAR(50) DEFAULT 'member',
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      );
+
+      CREATE UNIQUE INDEX IF NOT EXISTS idx_chat_members_unique ON chat_members(channel_id, user_id);
+      CREATE INDEX IF NOT EXISTS idx_chat_members_user_id ON chat_members(user_id);
+    `)
+
+    await query(`
+      CREATE TABLE IF NOT EXISTS chat_messages (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        channel_id UUID NOT NULL REFERENCES chat_channels(id) ON DELETE CASCADE,
+        user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        content TEXT,
+        thread_parent_id UUID REFERENCES chat_messages(id) ON DELETE CASCADE,
+        reply_count INTEGER DEFAULT 0,
+        edited_at TIMESTAMP,
+        deleted_at TIMESTAMP,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      );
+
+      CREATE INDEX IF NOT EXISTS idx_chat_messages_channel_id ON chat_messages(channel_id);
+      CREATE INDEX IF NOT EXISTS idx_chat_messages_thread_parent_id ON chat_messages(thread_parent_id);
+      CREATE INDEX IF NOT EXISTS idx_chat_messages_created_at ON chat_messages(created_at DESC);
+    `)
+
+    await query(`
+      CREATE TABLE IF NOT EXISTS chat_reactions (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        message_id UUID NOT NULL REFERENCES chat_messages(id) ON DELETE CASCADE,
+        user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        emoji VARCHAR(40) NOT NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      );
+
+      CREATE UNIQUE INDEX IF NOT EXISTS idx_chat_reactions_unique ON chat_reactions(message_id, user_id, emoji);
+      CREATE INDEX IF NOT EXISTS idx_chat_reactions_message_id ON chat_reactions(message_id);
+    `)
+
+    // Create tasks tables
+    await query(`
+      CREATE TABLE IF NOT EXISTS task_lists (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        name VARCHAR(255) NOT NULL,
+        description TEXT,
+        color VARCHAR(50) DEFAULT 'sunrise',
+        created_by UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      );
+
+      CREATE INDEX IF NOT EXISTS idx_task_lists_created_by ON task_lists(created_by);
+      CREATE INDEX IF NOT EXISTS idx_task_lists_created_at ON task_lists(created_at DESC);
+    `)
+
+    await query(`
+      CREATE TABLE IF NOT EXISTS tasks (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        list_id UUID NOT NULL REFERENCES task_lists(id) ON DELETE CASCADE,
+        title VARCHAR(255) NOT NULL,
+        description TEXT,
+        status VARCHAR(50) DEFAULT 'todo',
+        priority VARCHAR(50) DEFAULT 'medium',
+        due_at TIMESTAMP,
+        order_index INTEGER DEFAULT 0,
+        created_by UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      );
+
+      CREATE INDEX IF NOT EXISTS idx_tasks_list_id ON tasks(list_id);
+      CREATE INDEX IF NOT EXISTS idx_tasks_status ON tasks(status);
+      CREATE INDEX IF NOT EXISTS idx_tasks_due_at ON tasks(due_at);
+    `)
+
+    await query(`
+      CREATE TABLE IF NOT EXISTS task_assignees (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        task_id UUID NOT NULL REFERENCES tasks(id) ON DELETE CASCADE,
+        user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      );
+
+      CREATE UNIQUE INDEX IF NOT EXISTS idx_task_assignees_unique ON task_assignees(task_id, user_id);
+      CREATE INDEX IF NOT EXISTS idx_task_assignees_user_id ON task_assignees(user_id);
+    `)
+
+    await query(`
+      CREATE TABLE IF NOT EXISTS task_comments (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        task_id UUID NOT NULL REFERENCES tasks(id) ON DELETE CASCADE,
+        user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        content TEXT NOT NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      );
+
+      CREATE INDEX IF NOT EXISTS idx_task_comments_task_id ON task_comments(task_id);
+      CREATE INDEX IF NOT EXISTS idx_task_comments_created_at ON task_comments(created_at DESC);
+    `)
+
+    await query(`
+      CREATE TABLE IF NOT EXISTS task_sprints (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        list_id UUID NOT NULL REFERENCES task_lists(id) ON DELETE CASCADE,
+        name VARCHAR(255) NOT NULL,
+        goal TEXT,
+        start_at TIMESTAMP,
+        end_at TIMESTAMP,
+        status VARCHAR(50) DEFAULT 'planned',
+        created_by UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      );
+
+      CREATE INDEX IF NOT EXISTS idx_task_sprints_list_id ON task_sprints(list_id);
+      CREATE INDEX IF NOT EXISTS idx_task_sprints_status ON task_sprints(status);
+    `)
+
+    await query(`
+      CREATE TABLE IF NOT EXISTS task_sprint_items (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        sprint_id UUID NOT NULL REFERENCES task_sprints(id) ON DELETE CASCADE,
+        task_id UUID NOT NULL REFERENCES tasks(id) ON DELETE CASCADE,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      );
+
+      CREATE UNIQUE INDEX IF NOT EXISTS idx_task_sprint_items_unique ON task_sprint_items(sprint_id, task_id);
+      CREATE INDEX IF NOT EXISTS idx_task_sprint_items_sprint_id ON task_sprint_items(sprint_id);
     `)
 
     console.log('✅ Database tables initialized')

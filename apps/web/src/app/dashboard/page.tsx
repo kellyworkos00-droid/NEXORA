@@ -1,118 +1,108 @@
+import Link from 'next/link'
 import DashboardLayout from '@/components/dashboard/dashboard-layout'
 
 export default function DashboardPage() {
   return (
     <DashboardLayout>
       <div className="space-y-6">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900">Dashboard</h1>
-          <p className="text-gray-500 mt-1">Welcome back! Here's what's happening today.</p>
-        </div>
+        <section className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-orange-100 via-rose-50 to-amber-100 p-6 sm:p-8">
+          <div className="absolute -right-10 -top-16 h-40 w-40 rounded-full bg-white/40 blur-2xl" />
+          <div className="absolute -left-10 -bottom-16 h-40 w-40 rounded-full bg-orange-200/60 blur-2xl" />
+          <div className="relative">
+            <p className="text-sm font-semibold uppercase tracking-wide text-orange-700">Good afternoon</p>
+            <h1 className="mt-2 text-2xl sm:text-3xl font-bold text-gray-900">
+              Your pipeline is heating up.
+            </h1>
+            <p className="mt-2 text-sm sm:text-base text-gray-700 max-w-xl">
+              Keep momentum on key deals, follow up on new leads, and ship next week’s launches with confidence.
+            </p>
+            <div className="mt-5 flex flex-wrap gap-3">
+              <button className="px-4 py-2 rounded-full bg-orange-600 text-white text-sm font-semibold shadow-sm hover:bg-orange-700">
+                Create deal
+              </button>
+              <button className="px-4 py-2 rounded-full bg-white/80 text-orange-700 text-sm font-semibold ring-1 ring-orange-200 hover:bg-white">
+                Schedule follow-up
+              </button>
+              <Link
+                href="/dashboard/notifications"
+                className="px-4 py-2 rounded-full bg-white/80 text-gray-800 text-sm font-semibold ring-1 ring-orange-200 hover:bg-white"
+              >
+                View notifications
+              </Link>
+            </div>
+          </div>
+        </section>
 
-        {/* Stats Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+        <section className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+          {[
+            { label: 'Total Revenue', value: '$180K', trend: '+12% this month', barClass: 'bg-emerald-200' },
+            { label: 'Active Deals', value: '24', trend: '3 closing this week', barClass: 'bg-orange-200' },
+            { label: 'New Customers', value: '48', trend: '+8% this month', barClass: 'bg-rose-200' },
+            { label: 'Pending Tasks', value: '12', trend: '5 due today', barClass: 'bg-amber-200' },
+          ].map((stat) => (
+            <div
+              key={stat.label}
+              className="rounded-2xl bg-white/90 ring-1 ring-orange-100 p-4 shadow-sm"
+            >
+              <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">
+                {stat.label}
+              </p>
+              <p className="mt-2 text-2xl font-bold text-gray-900">{stat.value}</p>
+              <p className="mt-2 text-xs text-gray-600">{stat.trend}</p>
+              <div className={`mt-4 h-1.5 w-12 rounded-full ${stat.barClass}`} />
+            </div>
+          ))}
+        </section>
+
+        <section className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <div className="lg:col-span-2 rounded-2xl bg-white/90 ring-1 ring-orange-100 p-6 shadow-sm">
             <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-gray-500">Total Revenue</p>
-                <p className="text-3xl font-bold text-gray-900 mt-2">$180K</p>
-                <p className="text-sm text-green-600 mt-2">+12% from last month</p>
-              </div>
-              <div className="h-12 w-12 rounded-full bg-green-100 flex items-center justify-center">
-                <svg className="h-6 w-6 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-              </div>
+              <h2 className="text-lg font-semibold text-gray-900">Today’s Focus</h2>
+              <button className="text-sm font-semibold text-orange-700">See all</button>
+            </div>
+            <div className="mt-4 space-y-4">
+              {[
+                { title: 'Follow up with Orbit Media', time: '11:30 AM', tag: 'High priority' },
+                { title: 'Finalize Nova Labs proposal', time: '2:00 PM', tag: 'Due today' },
+                { title: 'Prep Q1 handoff with Growth team', time: '4:00 PM', tag: 'Internal' },
+              ].map((item) => (
+                <div key={item.title} className="flex items-center justify-between rounded-xl bg-orange-50/60 p-4">
+                  <div>
+                    <p className="text-sm font-semibold text-gray-900">{item.title}</p>
+                    <p className="text-xs text-gray-600 mt-1">{item.time}</p>
+                  </div>
+                  <span className="text-xs font-semibold text-orange-700 bg-white px-2 py-1 rounded-full ring-1 ring-orange-200">
+                    {item.tag}
+                  </span>
+                </div>
+              ))}
             </div>
           </div>
 
-          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+          <div className="rounded-2xl bg-white/90 ring-1 ring-orange-100 p-6 shadow-sm">
             <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-gray-500">Active Deals</p>
-                <p className="text-3xl font-bold text-gray-900 mt-2">24</p>
-                <p className="text-sm text-blue-600 mt-2">3 closing this week</p>
-              </div>
-              <div className="h-12 w-12 rounded-full bg-blue-100 flex items-center justify-center">
-                <svg className="h-6 w-6 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-                </svg>
-              </div>
+              <h2 className="text-lg font-semibold text-gray-900">Notifications</h2>
+              <Link className="text-sm font-semibold text-orange-700" href="/dashboard/notifications">
+                View all
+              </Link>
+            </div>
+            <div className="mt-4 space-y-3">
+              {[
+                { title: 'Email verified', meta: '2h ago', dotClass: 'bg-emerald-400' },
+                { title: 'New login from iPhone', meta: '5h ago', dotClass: 'bg-amber-400' },
+                { title: '2FA enabled successfully', meta: '1d ago', dotClass: 'bg-rose-400' },
+              ].map((note) => (
+                <div key={note.title} className="flex items-center gap-3 rounded-xl bg-orange-50/60 p-3">
+                  <span className={`h-2.5 w-2.5 rounded-full ${note.dotClass}`} />
+                  <div className="flex-1">
+                    <p className="text-sm font-semibold text-gray-900">{note.title}</p>
+                    <p className="text-xs text-gray-600 mt-1">{note.meta}</p>
+                  </div>
+                </div>
+              ))}
             </div>
           </div>
-
-          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-gray-500">New Customers</p>
-                <p className="text-3xl font-bold text-gray-900 mt-2">48</p>
-                <p className="text-sm text-green-600 mt-2">+8% from last month</p>
-              </div>
-              <div className="h-12 w-12 rounded-full bg-purple-100 flex items-center justify-center">
-                <svg className="h-6 w-6 text-purple-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
-                </svg>
-              </div>
-            </div>
-          </div>
-
-          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-gray-500">Pending Tasks</p>
-                <p className="text-3xl font-bold text-gray-900 mt-2">12</p>
-                <p className="text-sm text-orange-600 mt-2">5 due today</p>
-              </div>
-              <div className="h-12 w-12 rounded-full bg-orange-100 flex items-center justify-center">
-                <svg className="h-6 w-6 text-orange-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
-                </svg>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Recent Activity */}
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-          <h2 className="text-lg font-semibold text-gray-900 mb-4">Recent Activity</h2>
-          <div className="space-y-4">
-            <div className="flex items-start space-x-3">
-              <div className="flex-shrink-0 h-8 w-8 rounded-full bg-green-100 flex items-center justify-center">
-                <span className="text-green-600 font-semibold text-sm">A</span>
-              </div>
-              <div className="flex-1 min-w-0">
-                <p className="text-sm text-gray-900">
-                  <span className="font-medium">Acme Corporation</span> deal moved to Negotiation
-                </p>
-                <p className="text-xs text-gray-500 mt-1">2 hours ago</p>
-              </div>
-            </div>
-
-            <div className="flex items-start space-x-3">
-              <div className="flex-shrink-0 h-8 w-8 rounded-full bg-blue-100 flex items-center justify-center">
-                <span className="text-blue-600 font-semibold text-sm">T</span>
-              </div>
-              <div className="flex-1 min-w-0">
-                <p className="text-sm text-gray-900">
-                  New customer <span className="font-medium">TechStart Inc</span> added
-                </p>
-                <p className="text-xs text-gray-500 mt-1">5 hours ago</p>
-              </div>
-            </div>
-
-            <div className="flex items-start space-x-3">
-              <div className="flex-shrink-0 h-8 w-8 rounded-full bg-purple-100 flex items-center justify-center">
-                <span className="text-purple-600 font-semibold text-sm">AI</span>
-              </div>
-              <div className="flex-1 min-w-0">
-                <p className="text-sm text-gray-900">
-                  AI predicted <span className="font-medium">87% win rate</span> for Q1 pipeline
-                </p>
-                <p className="text-xs text-gray-500 mt-1">1 day ago</p>
-              </div>
-            </div>
-          </div>
-        </div>
+        </section>
       </div>
     </DashboardLayout>
   )
