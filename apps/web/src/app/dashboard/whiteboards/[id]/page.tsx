@@ -21,6 +21,9 @@ interface WhiteboardItem {
   height: number
   content: string | null
   color: string | null
+  shapeType?: string
+  imageUrl?: string
+  reactions?: Record<string, string[]>
   createdBy: string
 }
 
@@ -33,7 +36,9 @@ const noteColors: Record<string, string> = {
   sunshine: 'bg-gradient-to-br from-yellow-100 to-yellow-200 border-yellow-300 text-yellow-900',
 }
 
-type ToolType = 'select' | 'sticky' | 'text' | 'shape'
+const shapeTypes = ['rectangle', 'circle', 'triangle', 'diamond', 'hexagon']
+
+type ToolType = 'select' | 'sticky' | 'text' | 'shape' | 'image' | 'draw' | 'line' | 'arrow'
 
 export default function WhiteboardDetailPage({ params }: { params: { id: string } }) {
   const boardId = params.id
@@ -48,7 +53,9 @@ export default function WhiteboardDetailPage({ params }: { params: { id: string 
   const [pan, setPan] = useState({ x: 0, y: 0 })
   const [isPanning, setIsPanning] = useState(false)
   const [showToolbar, setShowToolbar] = useState(true)
-  
+  const [showShapeMenu, setShowShapeMenu] = useState(false)
+  const [selectedItemForEmoji, setSelectedItemForEmoji] = useState<string | null>(null)
+
   const dragOffset = useRef({ x: 0, y: 0 })
   const panStart = useRef({ x: 0, y: 0 })
   const socketRef = useRef<WebSocket | null>(null)
@@ -67,13 +74,8 @@ export default function WhiteboardDetailPage({ params }: { params: { id: string 
       const boardData = await boardRes.json()
       const itemsData = await itemsRes.json()
 
-      if (!boardRes.ok) {
-        throw new Error(boardData.error || 'Failed to load board')
-      }
-
-      if (!itemsRes.ok) {
-        throw new Error(itemsData.error || 'Failed to load items')
-      }
+      if (!boardRes.ok) throw new Error(boardData.error || 'Failed to load board')
+      if (!itemsRes.ok) throw new Error(itemsData.error || 'Failed to load items')
 
       setBoard(boardData.board)
       setItems(itemsData.items || [])
@@ -114,46 +116,19 @@ export default function WhiteboardDetailPage({ params }: { params: { id: string 
       }
     }
 
-    return () => {
-      socket.close()
-    }
+    return () => socket.close()
   }, [boardId])
 
-  // Keyboard shortcuts
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Delete' && activeItem) {
-        deleteItem(activeItem)
-      }
-      if (e.key === 's' && !e.ctrlKey && !e.metaKey) {
-        e.preventDefault()
-        setActiveTool('sticky')
-      }
-      if (e.key === 't' && !e.ctrlKey && !e.metaKey) {
-        e.preventDefault()
-        setActiveTool('text')
-      }
-      if (e.key === 'v' && !e.ctrlKey && !e.metaKey) {
-        e.preventDefault()
-        setActiveTool('select')
-      }
-      if (e.key === 'Escape') {
-        setActiveItem(null)
-        setActiveTool('select')
-      }
-      if (e.key === '+' && (e.ctrlKey || e.metaKey)) {
-        e.preventDefault()
-        setZoom(prev => Math.min(prev + 0.1, 2))
-      }
-      if (e.key === '-' && (e.ctrlKey || e.metaKey)) {
-        e.preventDefault()
-        setZoom(prev => Math.max(prev - 0.1, 0.5))
-      }
-      if (e.key === '0' && (e.ctrlKey || e.metaKey)) {
-        e.preventDefault()
-        setZoom(1)
-        setPan({ x: 0, y: 0 })
-      }
+      if (e.key === 'Delete' && activeItem) deleteItem(activeItem)
+      if (e.key === 's' && !e.ctrlKey && !e.metaKey) { e.preventDefault(); setActiveTool('sticky') }
+      if (e.key === 't' && !e.ctrlKey && !e.metaKey) { e.preventDefault(); setActiveTool('text') }
+      if (e.key === 'v' && !e.ctrlKey && !e.metaKey) { e.preventDefault(); setActiveTool('select') }
+      if (e.key === 'Escape') { setActiveItem(null); setActiveTool('select') }
+      if (e.key === '+' && (e.ctrlKey || e.metaKey)) { e.preventDefault(); setZoom(prev => Math.min(prev + 0.1, 2)) }
+      if (e.key === '-' && (e.ctrlKey || e.metaKey)) { e.preventDefault(); setZoom(prev => Math.max(prev - 0.1, 0.5)) }
+      if (e.key === '0' && (e.ctrlKey || e.metaKey)) { e.preventDefault(); setZoom(1); setPan({ x: 0, y: 0 }) }
     }
 
     window.addEventListener('keydown', handleKeyDown)
@@ -166,39 +141,23 @@ export default function WhiteboardDetailPage({ params }: { params: { id: string 
     }
   }
 
-  const createItem = async (type: string, x: number, y: number) => {
+  const createItem = async (type: string, x: number, y: number, extras?: any) => {
     try {
       const itemData: any = {
-        type,
-        x: Math.round(x / zoom - pan.x),
-        y: Math.round(y / zoom - pan.y),
-        color: selectedColor,
+        type, x: Math.round(x / zoom - pan.x), y: Math.round(y / zoom - pan.y), color: selectedColor, ...extras,
       }
 
-      if (type === 'note') {
-        itemData.width = 240
-        itemData.height = 160
-        itemData.content = 'New idea'
-      } else if (type === 'text') {
-        itemData.width = 300
-        itemData.height = 100
-        itemData.content = 'Type here...'
-      } else if (type === 'shape') {
-        itemData.width = 200
-        itemData.height = 200
-        itemData.content = 'rectangle'
-      }
+      if (type === 'note') { itemData.width = 240; itemData.height = 160; itemData.content = 'New idea' }
+      else if (type === 'text') { itemData.width = 300; itemData.height = 100; itemData.content = 'Type here...' }
+      else if (type === 'shape') { itemData.width = extras?.width || 150; itemData.height = extras?.height || 150; itemData.shapeType = extras?.shapeType || 'rectangle' }
+      else if (type === 'image') { itemData.width = extras?.width || 300; itemData.height = extras?.height || 200; itemData.imageUrl = extras?.imageUrl }
 
       const response = await fetch(`/api/whiteboards/${boardId}/items`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(itemData),
+        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(itemData),
       })
 
       const data = await response.json()
-      if (!response.ok) {
-        throw new Error(data.error || 'Failed to create item')
-      }
+      if (!response.ok) throw new Error(data.error || 'Failed to create item')
 
       setItems((prev) => [...prev, data.item])
       broadcast('item:create', data.item)
@@ -208,21 +167,13 @@ export default function WhiteboardDetailPage({ params }: { params: { id: string 
     }
   }
 
-  const createStickyNote = async () => {
-    createItem('note', 120, 120)
-  }
-
   const updateItem = async (item: WhiteboardItem) => {
     try {
       const response = await fetch(`/api/whiteboards/${boardId}/items/${item.id}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(item),
+        method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(item),
       })
       const data = await response.json()
-      if (!response.ok) {
-        throw new Error(data.error || 'Failed to update item')
-      }
+      if (!response.ok) throw new Error(data.error || 'Failed to update item')
       setItems((prev) => prev.map((prevItem) => (prevItem.id === item.id ? data.item : prevItem)))
       broadcast('item:update', data.item)
     } catch (err: any) {
@@ -232,19 +183,59 @@ export default function WhiteboardDetailPage({ params }: { params: { id: string 
 
   const deleteItem = async (itemId: string) => {
     try {
-      const response = await fetch(`/api/whiteboards/${boardId}/items/${itemId}`, {
-        method: 'DELETE',
-      })
+      const response = await fetch(`/api/whiteboards/${boardId}/items/${itemId}`, { method: 'DELETE' })
       const data = await response.json()
-      if (!response.ok) {
-        throw new Error(data.error || 'Failed to delete item')
-      }
+      if (!response.ok) throw new Error(data.error || 'Failed to delete item')
       setItems((prev) => prev.filter((item) => item.id !== itemId))
       broadcast('item:delete', { id: itemId })
       setActiveItem(null)
     } catch (err: any) {
       setError(err.message || 'Failed to delete item')
     }
+  }
+
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    try {
+      const formData = new FormData()
+      formData.append('file', file)
+      const response = await fetch('/api/upload', { method: 'POST', body: formData, credentials: 'include' })
+      if (!response.ok) throw new Error('Upload failed')
+      const data = await response.json()
+      createItem('image', 150, 150, { imageUrl: data.url, width: 300, height: 200 })
+    } catch (err: any) {
+      setError('Failed to upload image')
+    }
+  }
+
+  const addReaction = async (itemId: string, emoji: string) => {
+    const item = items.find(i => i.id === itemId)
+    if (!item) return
+    const updatedReactions = { ...item.reactions || {} }
+    if (!updatedReactions[emoji]) updatedReactions[emoji] = []
+    if (!updatedReactions[emoji].includes('current-user')) updatedReactions[emoji].push('current-user')
+    await updateItem({ ...item, reactions: updatedReactions })
+  }
+
+  const saveAsTemplate = async () => {
+    const templateName = prompt('Enter template name:')
+    if (!templateName) return
+    try {
+      const response = await fetch(`/api/whiteboards/${boardId}/templates`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'include',
+        body: JSON.stringify({ name: templateName, description: 'Saved template', config: items }),
+      })
+      const data = await response.json()
+      if (!response.ok) throw new Error(data.error || 'Failed to save template')
+    } catch (err: any) {
+      setError(err.message || 'Failed to save template')
+    }
+  }
+
+  const createShapeItem = (shapeType: string) => {
+    createItem('shape', 150, 150, { shapeType, width: 150, height: 150 })
+    setShowShapeMenu(false)
   }
 
   const handleCanvasClick = (e: React.MouseEvent<HTMLDivElement>) => {
@@ -261,33 +252,21 @@ export default function WhiteboardDetailPage({ params }: { params: { id: string 
     event.stopPropagation()
     event.currentTarget.setPointerCapture(event.pointerId)
     setActiveItem(item.id)
-    dragOffset.current = {
-      x: event.clientX - item.x * zoom,
-      y: event.clientY - item.y * zoom,
-    }
+    dragOffset.current = { x: event.clientX - item.x * zoom, y: event.clientY - item.y * zoom }
   }
 
   const handlePointerMove = (event: React.PointerEvent<HTMLDivElement>, item: WhiteboardItem) => {
     if (activeItem !== item.id) return
     const nextX = Math.max(0, (event.clientX - dragOffset.current.x) / zoom)
     const nextY = Math.max(0, (event.clientY - dragOffset.current.y) / zoom)
-
-    setItems((prev) =>
-      prev.map((note) =>
-        note.id === item.id
-          ? { ...note, x: nextX, y: nextY }
-          : note
-      )
-    )
+    setItems((prev) => prev.map((note) => (note.id === item.id ? { ...note, x: nextX, y: nextY } : note)))
   }
 
   const handlePointerUp = (itemId: string) => {
     if (activeItem !== itemId) return
     setActiveItem(null)
     const latestItem = items.find((note) => note.id === itemId)
-    if (latestItem) {
-      updateItem(latestItem)
-    }
+    if (latestItem) updateItem(latestItem)
   }
 
   const handleCanvasPanStart = (e: React.PointerEvent) => {
@@ -298,12 +277,7 @@ export default function WhiteboardDetailPage({ params }: { params: { id: string 
   }
 
   const handleCanvasPanMove = (e: React.PointerEvent) => {
-    if (isPanning) {
-      setPan({
-        x: e.clientX - panStart.current.x,
-        y: e.clientY - panStart.current.y,
-      })
-    }
+    if (isPanning) setPan({ x: e.clientX - panStart.current.x, y: e.clientY - panStart.current.y })
   }
 
   const handleCanvasPanEnd = () => {
@@ -331,44 +305,15 @@ export default function WhiteboardDetailPage({ params }: { params: { id: string 
       <div className="space-y-4">
         {/* Header */}
         <section className="rounded-3xl bg-white/90 ring-1 ring-orange-100 p-4 sm:p-6 shadow-sm">
-          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex items-center justify-between">
             <div className="flex-1">
-              <div className="flex items-center gap-3">
-                <Link
-                  href="/dashboard/whiteboards"
-                  className="rounded-lg p-2 hover:bg-orange-50 text-gray-600"
-                >
-                  ← Back
-                </Link>
-                <div>
-                  <p className="text-xs font-semibold uppercase tracking-wide text-orange-700">Whiteboard</p>
-                  <h1 className="mt-1 text-xl sm:text-2xl font-bold text-gray-900">{board.name}</h1>
-                </div>
-              </div>
+              <p className="text-xs font-semibold uppercase tracking-widest text-orange-700 dark:text-orange-300">Whiteboard</p>
+              <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white">{board.name}</h1>
+              {board.description && <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">{board.description}</p>}
             </div>
-            <div className="flex items-center gap-2">
-              <button
-                onClick={() => setShowToolbar(!showToolbar)}
-                className="rounded-lg bg-white text-gray-700 px-3 py-2 text-sm font-medium ring-1 ring-orange-200 hover:bg-orange-50"
-              >
-                {showToolbar ? 'Hide toolbar' : 'Show toolbar'}
-              </button>
-              <div className="flex items-center gap-1 rounded-full bg-gray-100 px-2 py-1">
-                <button
-                  onClick={() => setZoom(prev => Math.max(prev - 0.1, 0.5))}
-                  className="rounded-lg px-2 py-1 text-sm font-medium hover:bg-white"
-                >
-                  −
-                </button>
-                <span className="px-2 text-sm font-semibold text-gray-700">{Math.round(zoom * 100)}%</span>
-                <button
-                  onClick={() => setZoom(prev => Math.min(prev + 0.1, 2))}
-                  className="rounded-lg px-2 py-1 text-sm font-medium hover:bg-white"
-                >
-                  +
-                </button>
-              </div>
-            </div>
+            <Link href="/dashboard/whiteboards" className="px-4 py-2 rounded-lg text-sm font-semibold text-gray-700 hover:bg-gray-100 transition">
+              ← Back
+            </Link>
           </div>
         </section>
 
@@ -376,178 +321,115 @@ export default function WhiteboardDetailPage({ params }: { params: { id: string 
 
         {/* Toolbar */}
         {showToolbar && (
-          <section className="rounded-2xl bg-white/90 ring-1 ring-orange-100 p-4 shadow-sm">
-            <div className="flex flex-wrap items-center gap-4">
-              <div className="flex gap-1 rounded-lg bg-gray-100 p-1.5">
-                <button
-                  onClick={() => setActiveTool('select')}
-                  className={`rounded-lg px-3 py-2 text-lg transition flex items-center gap-2 ${
-                    activeTool === 'select' ? 'bg-white text-orange-700 shadow-sm ring-1 ring-orange-200' : 'text-gray-600 hover:text-gray-900'
-                  }`}
-                  title="Select tool (V)"
-                >
-                  <span>👆</span>
-                  <span className="hidden sm:inline text-sm font-semibold">Select</span>
-                </button>
-                <button
-                  onClick={() => setActiveTool('sticky')}
-                  className={`rounded-lg px-3 py-2 text-lg transition flex items-center gap-2 ${
-                    activeTool === 'sticky' ? 'bg-white text-orange-700 shadow-sm ring-1 ring-orange-200' : 'text-gray-600 hover:text-gray-900'
-                  }`}
-                  title="Sticky note tool (S)"
-                >
-                  <span>📌</span>
-                  <span className="hidden sm:inline text-sm font-semibold">Sticky</span>
-                </button>
-                <button
-                  onClick={() => setActiveTool('text')}
-                  className={`rounded-lg px-3 py-2 text-lg transition flex items-center gap-2 ${
-                    activeTool === 'text' ? 'bg-white text-orange-700 shadow-sm ring-1 ring-orange-200' : 'text-gray-600 hover:text-gray-900'
-                  }`}
-                  title="Text box tool (T)"
-                >
-                  <span>📝</span>
-                  <span className="hidden sm:inline text-sm font-semibold">Text</span>
-                </button>
-                <button
-                  onClick={() => setActiveTool('shape')}
-                  className={`rounded-lg px-3 py-2 text-lg transition flex items-center gap-2 ${
-                    activeTool === 'shape' ? 'bg-white text-orange-700 shadow-sm ring-1 ring-orange-200' : 'text-gray-600 hover:text-gray-900'
-                  }`}
-                  title="Shape tool"
-                >
-                  <span>⬚</span>
-                  <span className="hidden sm:inline text-sm font-semibold">Shape</span>
-                </button>
+          <section className="rounded-2xl bg-white/90 ring-1 ring-orange-100 p-3 shadow-sm">
+            <div className="flex flex-wrap items-center gap-2 sm:gap-3">
+              <div className="flex gap-1 rounded-lg bg-gray-100 p-1">
+                {(['select', 'sticky', 'text', 'shape', 'image', 'draw', 'line', 'arrow'] as ToolType[]).map((tool) => (
+                  <button key={tool} onClick={() => tool === 'image' ? null : setActiveTool(tool)} className={`rounded px-2 py-1.5 text-sm ${activeTool === tool ? 'bg-white text-orange-700 shadow ring-1 ring-orange-200' : 'text-gray-600 hover:text-gray-900'}`} title={tool}>
+                    {tool === 'select' && '👆'} {tool === 'sticky' && '📌'} {tool === 'text' && '📝'} {tool === 'shape' && '⬚'} {tool === 'image' && '🖼'} {tool === 'draw' && '✏️'} {tool === 'line' && '↗'} {tool === 'arrow' && '➜'}
+                  </button>
+                ))}
+                <label className="rounded px-2 py-1.5 text-sm text-gray-600 hover:text-gray-900 cursor-pointer">
+                  <input type="file" accept="image/*" onChange={handleImageUpload} hidden />
+                  Upload
+                </label>
               </div>
 
-              <div className="h-8 w-px bg-gray-300" />
+              <div className="h-6 w-px bg-gray-300 hidden sm:block" />
 
-              <div className="flex items-center gap-2">
-                <span className="text-xs font-semibold uppercase tracking-wide text-gray-500 hidden sm:inline">Colors:</span>
-                <div className="flex gap-1.5">
-                  {colors.map((color) => (
-                    <button
-                      key={color}
-                      onClick={() => setSelectedColor(color)}
-                      className={`h-7 w-7 rounded-lg border-2 transition transform hover:scale-110 ${
-                        noteColors[color].split(' ')[0]
-                      } ${
-                        selectedColor === color ? 'border-orange-700 ring-2 ring-orange-300 shadow-md' : 'border-gray-300 hover:border-gray-400'
-                      }`}
-                      title={`${color} color`}
-                    />
-                  ))}
-                </div>
+              <div className="flex gap-1">
+                {colors.map((color) => (
+                  <button key={color} onClick={() => setSelectedColor(color)} className={`h-6 w-6 rounded border-2 ${noteColors[color].split(' ')[0]} ${selectedColor === color ? 'border-orange-700 ring-1 ring-orange-300' : 'border-gray-300'}`} />
+                ))}
               </div>
 
-              <div className="h-8 w-px bg-gray-300" />
+              <button onClick={() => setShowShapeMenu(!showShapeMenu)} className="rounded px-2 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-100">
+                Shapes ▼
+              </button>
 
-              <div className="flex items-center gap-2 flex-1 justify-end lg:justify-start">
-                <span className="text-xs text-gray-500 font-medium hidden lg:inline">💡 Keyboard: S=Sticky, T=Text, V=Select, Delete=Remove, Esc=Cancel</span>
-              </div>
+              <button onClick={saveAsTemplate} className="rounded px-2 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-100">
+                💾 Save
+              </button>
+
+              <button onClick={() => setShowToolbar(false)} className="ml-auto rounded px-2 py-1.5 text-xs font-medium text-gray-600 hover:bg-gray-100">
+                Hide
+              </button>
             </div>
           </section>
         )}
 
+        {!showToolbar && <button onClick={() => setShowToolbar(true)} className="rounded px-3 py-2 text-sm font-medium bg-white ring-1 ring-orange-100 hover:bg-orange-50">Show Toolbar</button>}
+
+        {/* Shape Menu */}
+        {showShapeMenu && (
+          <div className="absolute left-24 top-96 bg-white border border-gray-200 rounded-lg shadow-lg p-2 z-50">
+            {shapeTypes.map((shape) => (
+              <button key={shape} onClick={() => createShapeItem(shape)} className="block w-full text-left px-3 py-2 rounded hover:bg-orange-50 text-sm">
+                {shape}
+              </button>
+            ))}
+          </div>
+        )}
+
         {/* Canvas */}
-        <section className="relative rounded-3xl bg-white/90 ring-1 ring-orange-100 shadow-sm overflow-hidden">
-          <div
-            className={`absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(251,146,60,0.08)_1px,transparent_1px)] [background-size:24px_24px] ${
-              isPanning ? 'cursor-grabbing' : activeTool === 'select' ? 'cursor-default' : 'cursor-crosshair'
-            }`}
-          />
-
-          <div
-            className="relative h-[70vh] overflow-hidden"
-            onClick={handleCanvasClick}
-            onPointerDown={handleCanvasPanStart}
-            onPointerMove={handleCanvasPanMove}
-            onPointerUp={handleCanvasPanEnd}
-          >
-            <div
-              className="absolute min-h-[60vh] min-w-[900px]"
-              style={{
-                transform: `translate(${pan.x}px, ${pan.y}px) scale(${zoom})`,
-                transformOrigin: '0 0',
-                transition: isPanning ? 'none' : 'transform 0.1s ease-out',
-              }}
-            >
-              {items.map((item) => {
-                const isNote = item.type === 'note'
-                const isText = item.type === 'text'
-                const isShape = item.type === 'shape'
-
-                return (
-                  <div
-                    key={item.id}
-                    className={`absolute rounded-2xl border-2 shadow-lg p-4 text-sm transition-all ${
-                      noteColors[item.color || 'sunrise']
-                    } ${activeItem === item.id ? 'ring-4 ring-orange-400 ring-opacity-50 shadow-2xl scale-105' : 'hover:shadow-xl'}`}
-                    style={{
-                      left: item.x,
-                      top: item.y,
-                      width: item.width,
-                      height: item.height,
-                      cursor: activeTool === 'select' ? 'move' : 'default',
-                    }}
-                    onPointerDown={(event) => handlePointerDown(event, item)}
-                    onPointerMove={(event) => handlePointerMove(event, item)}
-                    onPointerUp={() => handlePointerUp(item.id)}
-                  >
-                    {(isNote || isText) && (
-                      <textarea
-                        value={item.content || ''}
-                        onChange={(event) => {
-                          const nextValue = event.target.value
-                          setItems((prev) =>
-                            prev.map((note) =>
-                              note.id === item.id ? { ...note, content: nextValue } : note
-                            )
-                          )
-                        }}
-                        onBlur={() => updateItem(item)}
-                        placeholder={isNote ? "What's on your mind?" : "Type here..."}
-                        className={`h-full w-full resize-none bg-transparent ${
-                          isText ? 'text-base' : 'text-sm'
-                        } font-medium outline-none placeholder:text-current placeholder:opacity-40`}
-                        style={{ pointerEvents: activeTool === 'select' ? 'auto' : 'none' }}
-                      />
-                    )}
-                    {isShape && (
-                      <div className="flex h-full w-full items-center justify-center text-2xl font-bold opacity-20">
-                        ◻
-                      </div>
-                    )}
-                    {activeItem === item.id && (
-                      <div className="absolute -top-10 right-0 flex gap-1 rounded-lg bg-white shadow-lg ring-1 ring-gray-200 p-1">
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation()
-                            deleteItem(item.id)
-                          }}
-                          className="rounded px-3 py-1 text-xs font-semibold text-rose-600 hover:bg-rose-50"
-                        >
-                          Delete
-                        </button>
-                      </div>
-                    )}
-                  </div>
-                )
-              })}
+        <section className="relative rounded-3xl bg-white/90 ring-1 ring-orange-100 shadow overflow-hidden">
+          <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(251,146,60,0.08)_1px,transparent_1px)] [background-size:24px_24px]" />
+          <div className="relative h-[70vh] overflow-hidden" onClick={handleCanvasClick} onPointerDown={handleCanvasPanStart} onPointerMove={handleCanvasPanMove} onPointerUp={handleCanvasPanEnd}>
+            <div style={{ transform: `translate(${pan.x}px, ${pan.y}px) scale(${zoom})`, transformOrigin: '0 0', transition: isPanning ? 'none' : 'transform 0.1s ease-out' }} className="absolute min-h-[60vh] min-w-[900px]">
+              {items.map((item) => (
+                <div key={item.id} style={{ left: item.x, top: item.y, width: item.width, height: item.height }} className={`absolute rounded-2xl border-2 shadow-lg p-4 ${item.type === 'image' ? 'p-0' : ''} ${!item.imageUrl ? noteColors[item.color || 'sunrise'] : 'bg-white border-gray-200'} ${activeItem === item.id ? 'ring-4 ring-orange-400 shadow-2xl' : ''}`} onPointerDown={(e) => handlePointerDown(e, item)} onPointerMove={(e) => handlePointerMove(e, item)} onPointerUp={() => handlePointerUp(item.id)}>
+                  {(item.type === 'note' || item.type === 'text') && (
+                    <textarea value={item.content || ''} onChange={(e) => setItems(prev => prev.map(n => (n.id === item.id ? { ...n, content: e.target.value } : n)))} onBlur={() => updateItem(item)} placeholder="Type..." className="h-full w-full resize-none bg-transparent outline-none font-medium" />
+                  )}
+                  {item.type === 'image' && item.imageUrl && <img src={item.imageUrl} alt="img" className="w-full h-full object-cover rounded-lg" />}
+                  {item.type === 'shape' && (
+                    <svg className="w-full h-full" viewBox="0 0 200 200">
+                      {item.shapeType === 'circle' && <circle cx="100" cy="100" r="80" fill="none" stroke="currentColor" strokeWidth="2" opacity="0.3" />}
+                      {!item.shapeType || item.shapeType === 'rectangle' && <rect x="20" y="20" width="160" height="160" fill="none" stroke="currentColor" strokeWidth="2" opacity="0.3" />}
+                      {item.shapeType === 'triangle' && <polygon points="100,20 180,180 20,180" fill="none" stroke="currentColor" strokeWidth="2" opacity="0.3" />}
+                      {item.shapeType === 'diamond' && <polygon points="100,20 180,100 100,180 20,100" fill="none" stroke="currentColor" strokeWidth="2" opacity="0.3" />}
+                    </svg>
+                  )}
+                  {activeItem === item.id && (
+                    <div className="absolute -top-10 right-0 flex gap-1 rounded-lg bg-white shadow ring-1 ring-gray-200 p-1">
+                      <button onClick={() => setSelectedItemForEmoji(item.id)} className="rounded px-2 py-1 text-xs font-semibold text-amber-600 hover:bg-amber-50">
+                        ☺️
+                      </button>
+                      <button onClick={() => deleteItem(item.id)} className="rounded px-3 py-1 text-xs font-semibold text-rose-600 hover:bg-rose-50">
+                        🗑
+                      </button>
+                    </div>
+                  )}
+                </div>
+              ))}
             </div>
           </div>
         </section>
 
-        {/* Stats */}
-        <div className="flex items-center justify-between px-4 text-xs text-gray-500">
-          <span>{items.length} items on board</span>
-          <div className="flex items-center gap-2">
-            <span className="h-2 w-2 rounded-full bg-emerald-400" />
-            <span>Live collaboration active</span>
-          </div>
+        <div className="flex justify-between text-xs text-gray-500 px-4">
+          <span>{items.length} items</span>
+          <span>🟢 Live Collab</span>
         </div>
       </div>
+
+      {/* Emoji Picker */}
+      {selectedItemForEmoji && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30">
+          <div className="bg-white rounded-2xl shadow-2xl p-6 w-96">
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-lg font-bold">Add Reaction</h3>
+              <button onClick={() => setSelectedItemForEmoji(null)} className="text-2xl text-gray-500">✕</button>
+            </div>
+            <div className="grid grid-cols-8 gap-2">
+              {['👍', '❤️', '😂', '🎉', '🔥', '✨', '🚀', '👌', '💯', '💡', '🤔', '😍', '🙌', '⭐', '👏', '🎯'].map((emoji) => (
+                <button key={emoji} onClick={() => { addReaction(selectedItemForEmoji, emoji); setSelectedItemForEmoji(null) }} className="text-2xl hover:scale-125 transition">
+                  {emoji}
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
     </DashboardLayout>
   )
 }

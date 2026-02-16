@@ -198,6 +198,11 @@ export async function initDatabase() {
         height INTEGER NOT NULL DEFAULT 160,
         content TEXT,
         color VARCHAR(50) DEFAULT 'sunrise',
+        shape_type VARCHAR(50),
+        image_url VARCHAR(500),
+        reactions JSONB,
+        is_locked BOOLEAN DEFAULT FALSE,
+        layer INTEGER DEFAULT 0,
         created_by UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
@@ -205,6 +210,22 @@ export async function initDatabase() {
 
       CREATE INDEX IF NOT EXISTS idx_whiteboard_items_board_id ON whiteboard_items(board_id);
       CREATE INDEX IF NOT EXISTS idx_whiteboard_items_created_at ON whiteboard_items(created_at DESC);
+    `)
+
+    await query(`
+      CREATE TABLE IF NOT EXISTS whiteboard_templates (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        board_id UUID NOT NULL REFERENCES whiteboards(id) ON DELETE CASCADE,
+        name VARCHAR(255) NOT NULL,
+        description TEXT,
+        config JSONB NOT NULL,
+        created_by UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      );
+
+      CREATE INDEX IF NOT EXISTS idx_whiteboard_templates_board_id ON whiteboard_templates(board_id);
+      CREATE INDEX IF NOT EXISTS idx_whiteboard_templates_created_by ON whiteboard_templates(created_by);
     `)
 
     // Create chat tables
