@@ -377,74 +377,74 @@ export default function WhiteboardDetailPage({ params }: { params: { id: string 
         {/* Toolbar */}
         {showToolbar && (
           <section className="rounded-2xl bg-white/90 ring-1 ring-orange-100 p-4 shadow-sm">
-            <div className="flex flex-wrap items-center gap-3">
-              <div className="flex gap-1 rounded-lg bg-gray-100 p-1">
+            <div className="flex flex-wrap items-center gap-4">
+              <div className="flex gap-1 rounded-lg bg-gray-100 p-1.5">
                 <button
                   onClick={() => setActiveTool('select')}
-                  className={`rounded-lg px-4 py-2 text-sm font-semibold transition ${
-                    activeTool === 'select' ? 'bg-white text-orange-700 shadow-sm' : 'text-gray-600 hover:text-gray-900'
+                  className={`rounded-lg px-3 py-2 text-lg transition flex items-center gap-2 ${
+                    activeTool === 'select' ? 'bg-white text-orange-700 shadow-sm ring-1 ring-orange-200' : 'text-gray-600 hover:text-gray-900'
                   }`}
-                  title="Select (V)"
+                  title="Select tool (V)"
                 >
-                  <span className="hidden sm:inline">Select</span>
-                  <span className="sm:hidden">✋</span>
+                  <span>👆</span>
+                  <span className="hidden sm:inline text-sm font-semibold">Select</span>
                 </button>
                 <button
                   onClick={() => setActiveTool('sticky')}
-                  className={`rounded-lg px-4 py-2 text-sm font-semibold transition ${
-                    activeTool === 'sticky' ? 'bg-white text-orange-700 shadow-sm' : 'text-gray-600 hover:text-gray-900'
+                  className={`rounded-lg px-3 py-2 text-lg transition flex items-center gap-2 ${
+                    activeTool === 'sticky' ? 'bg-white text-orange-700 shadow-sm ring-1 ring-orange-200' : 'text-gray-600 hover:text-gray-900'
                   }`}
-                  title="Sticky note (S)"
+                  title="Sticky note tool (S)"
                 >
-                  <span className="hidden sm:inline">Sticky</span>
-                  <span className="sm:hidden">📝</span>
+                  <span>📌</span>
+                  <span className="hidden sm:inline text-sm font-semibold">Sticky</span>
                 </button>
                 <button
                   onClick={() => setActiveTool('text')}
-                  className={`rounded-lg px-4 py-2 text-sm font-semibold transition ${
-                    activeTool === 'text' ? 'bg-white text-orange-700 shadow-sm' : 'text-gray-600 hover:text-gray-900'
+                  className={`rounded-lg px-3 py-2 text-lg transition flex items-center gap-2 ${
+                    activeTool === 'text' ? 'bg-white text-orange-700 shadow-sm ring-1 ring-orange-200' : 'text-gray-600 hover:text-gray-900'
                   }`}
-                  title="Text box (T)"
+                  title="Text box tool (T)"
                 >
-                  <span className="hidden sm:inline">Text</span>
-                  <span className="sm:hidden">T</span>
+                  <span>📝</span>
+                  <span className="hidden sm:inline text-sm font-semibold">Text</span>
                 </button>
                 <button
                   onClick={() => setActiveTool('shape')}
-                  className={`rounded-lg px-4 py-2 text-sm font-semibold transition ${
-                    activeTool === 'shape' ? 'bg-white text-orange-700 shadow-sm' : 'text-gray-600 hover:text-gray-900'
+                  className={`rounded-lg px-3 py-2 text-lg transition flex items-center gap-2 ${
+                    activeTool === 'shape' ? 'bg-white text-orange-700 shadow-sm ring-1 ring-orange-200' : 'text-gray-600 hover:text-gray-900'
                   }`}
-                  title="Shape"
+                  title="Shape tool"
                 >
-                  <span className="hidden sm:inline">Shape</span>
-                  <span className="sm:hidden">◻</span>
+                  <span>⬚</span>
+                  <span className="hidden sm:inline text-sm font-semibold">Shape</span>
                 </button>
               </div>
 
-              <div className="h-8 w-px bg-gray-200" />
+              <div className="h-8 w-px bg-gray-300" />
 
-              <div className="flex gap-1">
-                {colors.map((color) => (
-                  <button
-                    key={color}
-                    onClick={() => setSelectedColor(color)}
-                    className={`h-8 w-8 rounded-lg border-2 transition ${
-                      noteColors[color].split(' ')[0]
-                    } ${
-                      selectedColor === color ? 'border-orange-600 ring-2 ring-orange-200' : 'border-transparent'
-                    }`}
-                    title={color}
-                  />
-                ))}
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-semibold uppercase tracking-wide text-gray-500 hidden sm:inline">Colors:</span>
+                <div className="flex gap-1.5">
+                  {colors.map((color) => (
+                    <button
+                      key={color}
+                      onClick={() => setSelectedColor(color)}
+                      className={`h-7 w-7 rounded-lg border-2 transition transform hover:scale-110 ${
+                        noteColors[color].split(' ')[0]
+                      } ${
+                        selectedColor === color ? 'border-orange-700 ring-2 ring-orange-300 shadow-md' : 'border-gray-300 hover:border-gray-400'
+                      }`}
+                      title={`${color} color`}
+                    />
+                  ))}
+                </div>
               </div>
 
-              <div className="h-8 w-px bg-gray-200" />
+              <div className="h-8 w-px bg-gray-300" />
 
-              <div className="flex-1 text-xs text-gray-500">
-                <span className="hidden lg:inline">
-                  Tips: Click to add • Drag to move • Delete key to remove • Shift+drag to pan • Cmd/Ctrl + / - to zoom
-                </span>
-                <span className="lg:hidden">Click canvas to add items</span>
+              <div className="flex items-center gap-2 flex-1 justify-end lg:justify-start">
+                <span className="text-xs text-gray-500 font-medium hidden lg:inline">💡 Keyboard: S=Sticky, T=Text, V=Select, Delete=Remove, Esc=Cancel</span>
               </div>
             </div>
           </section>
