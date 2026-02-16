@@ -7,10 +7,14 @@ import { createProxyMiddleware } from 'http-proxy-middleware'
 import dotenv from 'dotenv'
 import { logger } from './utils/logger'
 import { authenticate } from './middleware/auth'
+import http, { IncomingMessage } from 'http'
+import jwt from 'jsonwebtoken'
+import { WebSocketServer, WebSocket, RawData } from 'ws'
 
 dotenv.config()
 
 const app = express()
+const server = http.createServer(app)
 const PORT = process.env.PORT || 4000
 
 // Middleware
@@ -141,10 +145,116 @@ app.use((req: Request, res: Response) => {
   res.status(404).json({ error: 'Route not found' })
 })
 
+// WebSocket server for realtime whiteboards
+const whiteboardRooms = new Map<string, Set<WebSocket>>()
+
+const wss = new WebSocketServer({ server, path: '/ws/whiteboards' })
+
+wss.on('connection', (socket: WebSocket, request: IncomingMessage) => {
+  const host = request.headers.host || 'localhost'
+  const url = new URL(request.url || '', `http://${host}`)
+  const boardId = url.searchParams.get('boardId')
+  const token = url.searchParams.get('token')
+
+  if (!boardId) {
+    socket.close(1008, 'boardId required')
+    return
+  }
+
+  if (token) {
+    try {
+      jwt.verify(token, process.env.JWT_SECRET || 'dev-secret')
+    } catch (error) {
+      socket.close(1008, 'Invalid token')
+      return
+    }
+  }
+
+  if (!whiteboardRooms.has(boardId)) {
+    whiteboardRooms.set(boardId, new Set())
+  }
+
+  whiteboardRooms.get(boardId)?.add(socket)
+
+  socket.on('message', (raw: RawData) => {
+    const room = whiteboardRooms.get(boardId)
+    if (!room) return
+
+    room.forEach((client) => {
+      if (client.readyState === WebSocket.OPEN) {
+        client.send(raw)
+      }
+    })
+  })
+
+  socket.on('close', () => {
+    const room = whiteboardRooms.get(boardId)
+    if (!room) return
+    room.delete(socket)
+    if (room.size === 0) {
+      whiteboardRooms.delete(boardId)
+    }
+  })
+})
+
+// WebSocket server for realtime chat
+const chatRooms = new Map<string, Set<WebSocket>>()
+
+const chatWss = new WebSocketServer({ server, path: '/ws/chat' })
+
+chatWss.on('connection', (socket: WebSocket, request: IncomingMessage) => {
+  const host = request.headers.host || 'localhost'
+  const url = new URL(request.url || '', `http://${host}`)
+  const channelId = url.searchParams.get('channelId')
+  const token = url.searchParams.get('token')
+
+  if (!channelId) {
+    socket.close(1008, 'channelId required')
+    return
+  }
+
+  if (token) {
+    try {
+      jwt.verify(token, process.env.JWT_SECRET || 'dev-secret')
+    } catch (error) {
+      socket.close(1008, 'Invalid token')
+      return
+    }
+  }
+
+  if (!chatRooms.has(channelId)) {
+    chatRooms.set(channelId, new Set())
+  }
+
+  chatRooms.get(channelId)?.add(socket)
+
+  socket.on('message', (raw: RawData) => {
+    const room = chatRooms.get(channelId)
+    if (!room) return
+
+    room.forEach((client) => {
+      if (client.readyState === WebSocket.OPEN) {
+        client.send(raw)
+      }
+    })
+  })
+
+  socket.on('close', () => {
+    const room = chatRooms.get(channelId)
+    if (!room) return
+    room.delete(socket)
+    if (room.size === 0) {
+      chatRooms.delete(channelId)
+    }
+  })
+})
+
 // Start server
-app.listen(PORT, () => {
+server.listen(PORT, () => {
   logger.info(`🚀 API Gateway running on port ${PORT}`)
   logger.info(`Environment: ${process.env.NODE_ENV || 'development'}`)
+  logger.info(`📡 WebSocket server ready at /ws/whiteboards`)
+  logger.info(`💬 WebSocket server ready at /ws/chat`)
 })
 
 export default app
